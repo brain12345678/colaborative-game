@@ -34,7 +34,6 @@
   .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
   @media(max-width:640px){.wrap{padding:0 20px;}}
 
-  /* subtle grain */
   .grain{
     position:fixed; inset:0; pointer-events:none; z-index:200;
     opacity:0.05; mix-blend-mode:overlay;
@@ -92,7 +91,7 @@
   .btn-primary{
     background:var(--coral); color:var(--abyss); padding:15px 32px; border-radius:2px;
     font-weight:600; font-size:0.95rem; letter-spacing:0.02em; transition:transform .2s, box-shadow .2s;
-    box-shadow:0 0 0 rgba(255,107,74,0);
+    box-shadow:0 0 0 rgba(255,107,74,0); border:none; cursor:pointer;
   }
   .btn-primary:hover{transform:translateY(-2px); box-shadow:0 8px 24px rgba(255,107,74,0.35);}
   .btn-ghost{
@@ -102,11 +101,8 @@
   }
   .btn-ghost:hover{border-color:var(--foam); background:rgba(255,255,255,0.05);}
 
-  /* island silhouette + water */
   .island-scene{position:absolute; bottom:0; left:0; right:0; height:46%; z-index:1;}
-  .water{
-    position:absolute; bottom:0; left:0; width:200%; height:70px;
-  }
+  .water{position:absolute; bottom:0; left:0; width:200%; height:70px;}
   .water path{fill:var(--lagoon);}
   .water.w1{animation:drift 18s linear infinite; opacity:0.55; bottom:14px;}
   .water.w2{animation:drift 26s linear infinite reverse; opacity:0.85; bottom:0;}
@@ -120,13 +116,11 @@
   .section-head h2{font-size:clamp(2.1rem, 4vw, 3rem); line-height:1.05; color:var(--foam);}
   .section-head p{margin-top:18px; color:var(--foam-dim); font-size:1.05rem; line-height:1.65; max-width:520px;}
 
-  /* ---------- CYCLE (signature element) ---------- */
+  /* ---------- CYCLE ---------- */
   .cycle-section{background:#0d2624; border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
   .cycle-grid{display:grid; grid-template-columns:1fr 1.1fr; gap:60px; align-items:center;}
   @media(max-width:860px){.cycle-grid{grid-template-columns:1fr;}}
-  .cycle-copy .phase{
-    display:flex; gap:18px; padding:20px 0; border-top:1px solid var(--line);
-  }
+  .cycle-copy .phase{display:flex; gap:18px; padding:20px 0; border-top:1px solid var(--line);}
   .cycle-copy .phase:last-child{border-bottom:1px solid var(--line);}
   .phase .tag{
     font-family:'IBM Plex Mono',monospace; font-size:0.7rem; letter-spacing:0.12em;
@@ -136,11 +130,10 @@
   .phase.night .tag{background:rgba(110,242,176,0.15); color:var(--bioglow);}
   .phase h4{font-size:1.15rem; margin-bottom:6px; font-weight:600; font-family:'Inter',sans-serif;}
   .phase p{color:var(--foam-dim); font-size:0.95rem; line-height:1.55;}
-
   .clock-wrap{display:flex; justify-content:center;}
   .tide-clock{width:100%; max-width:380px;}
 
-  /* ---------- GATHER (resource grid) ---------- */
+  /* ---------- GATHER ---------- */
   .resource-grid{
     display:grid; grid-template-columns:repeat(3, 1fr); gap:1px;
     background:var(--line); border:1px solid var(--line);
@@ -163,6 +156,23 @@
   .stat-row .stat b{display:block; font-family:'Fraunces',serif; font-size:2rem; color:var(--sand);}
   .stat-row .stat span{font-size:0.82rem; color:var(--foam-dim); text-transform:uppercase; letter-spacing:0.06em;}
 
+  /* ---------- LOSS ---------- */
+  .loss-section{
+    background:radial-gradient(ellipse 70% 60% at 50% 0%, rgba(255,107,74,0.10), transparent 65%), var(--abyss);
+    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  }
+  .loss-grid{display:grid; grid-template-columns:1.1fr 1fr; gap:60px; align-items:center;}
+  @media(max-width:860px){.loss-grid{grid-template-columns:1fr;}}
+  .loss-list{list-style:none; margin-top:30px; display:flex; flex-direction:column; gap:0;}
+  .loss-list li{
+    display:flex; gap:16px; padding:18px 0; border-top:1px solid var(--line); align-items:flex-start;
+  }
+  .loss-list li:last-child{border-bottom:1px solid var(--line);}
+  .loss-list .mark{color:var(--coral); font-family:'IBM Plex Mono',monospace; font-size:0.85rem; margin-top:2px;}
+  .loss-list p{color:var(--foam-dim); font-size:0.95rem; line-height:1.55;}
+  .loss-list strong{color:var(--foam); font-weight:600;}
+  .loss-visual{display:flex; justify-content:center;}
+
   /* ---------- ENEMIES ---------- */
   .enemy-section{background:var(--abyss);}
   .enemy-list{border-top:1px solid var(--line);}
@@ -171,7 +181,7 @@
     padding:26px 0; border-bottom:1px solid var(--line); transition:padding-left .25s;
   }
   .enemy-row:hover{padding-left:12px; background:rgba(110,242,176,0.03);}
-  @media(max-width:700px){.enemy-row{grid-template-columns:70px 1fr; }
+  @media(max-width:700px){.enemy-row{grid-template-columns:70px 1fr;}
     .enemy-row .threat{display:none;}}
   .enemy-row .glyph{font-family:'IBM Plex Mono',monospace; font-size:0.75rem; color:var(--bioglow); letter-spacing:0.05em;}
   .enemy-row h4{font-family:'Fraunces',serif; font-size:1.3rem; margin-bottom:6px;}
@@ -180,29 +190,13 @@
   .threat i{width:8px; height:8px; background:var(--line); border-radius:1px;}
   .threat i.on{background:var(--coral);}
 
-  /* ---------- CO-OP ---------- */
-  .coop-section{
-    background:radial-gradient(ellipse 80% 60% at 50% 100%, rgba(255,107,74,0.14), transparent 65%), #0d2624;
-    text-align:center; border-top:1px solid var(--line);
-  }
-  .coop-section .section-head{margin-left:auto; margin-right:auto; text-align:center;}
-  .coop-section .section-head .eyebrow{justify-content:center;}
-  .coop-section .section-head .eyebrow::after{display:flex; content:''; width:24px; height:1px; background:var(--bioglow); opacity:0.6;}
-  .crew-row{display:flex; justify-content:center; gap:-10px; margin:44px 0; position:relative;}
-  .crew-avatar{
-    width:64px; height:64px; border-radius:50%; border:2px solid var(--abyss);
-    margin-left:-16px; display:flex; align-items:center; justify-content:center;
-    font-family:'Fraunces',serif; font-weight:600; font-size:1.1rem; color:var(--abyss);
-  }
-  .crew-avatar:first-child{margin-left:0;}
-
   /* ---------- FINAL CTA ---------- */
   .final-cta{
     text-align:center; padding:140px 24px;
     background:linear-gradient(180deg, #0d2624, var(--abyss));
   }
   .final-cta h2{font-size:clamp(2.4rem, 6vw, 4rem); max-width:720px; margin:0 auto 28px; line-height:1.05;}
-  .final-cta .platforms{margin-top:36px; display:flex; gap:22px; justify-content:center; color:var(--foam-dim); font-size:0.85rem; letter-spacing:0.05em;}
+  .final-cta .platforms{margin-top:36px; display:flex; gap:22px; justify-content:center; color:var(--foam-dim); font-size:0.85rem; letter-spacing:0.05em; flex-wrap:wrap;}
 
   footer{
     border-top:1px solid var(--line); padding:36px 32px; display:flex; justify-content:space-between;
@@ -212,48 +206,6 @@
   @media (prefers-reduced-motion: reduce){
     .water, .star, .tide-indicator{animation:none !important;}
   }
-
-  /* ---------- LOBBY MODAL ---------- */
-  .lobby-overlay{
-    position:fixed; inset:0; background:rgba(10,28,27,0.82); backdrop-filter:blur(6px);
-    z-index:300; display:none; align-items:center; justify-content:center; padding:24px;
-  }
-  .lobby-overlay.open{display:flex;}
-  .lobby-modal{
-    background:#0f2b29; border:1px solid var(--line); border-radius:4px; padding:40px;
-    max-width:440px; width:100%; position:relative; max-height:86vh; overflow-y:auto;
-  }
-  @media(max-width:480px){.lobby-modal{padding:28px 22px;}}
-  .lobby-close{
-    position:absolute; top:14px; right:14px; background:none; border:none; color:var(--foam-dim);
-    font-size:1.6rem; cursor:pointer; line-height:1; padding:6px;
-  }
-  .lobby-close:hover{color:var(--foam);}
-  .lobby-modal h3{font-size:1.5rem; margin-top:8px; line-height:1.2;}
-  .lobby-tabs{display:flex; margin:24px 0 20px; border-bottom:1px solid var(--line);}
-  .lobby-tab{
-    background:none; border:none; color:var(--foam-dim); padding:10px 4px; font-size:0.9rem;
-    cursor:pointer; border-bottom:2px solid transparent; margin-right:24px; font-family:'Inter',sans-serif;
-  }
-  .lobby-tab.active{color:var(--foam); border-bottom-color:var(--coral);}
-  .lobby-pane label{display:block; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--foam-dim); margin-bottom:8px;}
-  .lobby-pane input{
-    width:100%; background:var(--abyss); border:1px solid var(--line); color:var(--foam);
-    padding:12px 14px; border-radius:2px; font-family:'Inter',sans-serif; font-size:0.95rem;
-  }
-  .lobby-pane input:focus{outline:none; border-color:var(--bioglow);}
-  .lobby-error{color:var(--coral); font-size:0.85rem; margin-top:10px; min-height:1em;}
-  .room-code{font-family:'IBM Plex Mono',monospace; font-size:2.2rem; letter-spacing:0.3em; color:var(--sand); margin-top:6px;}
-  .crew-list{margin-top:26px; display:flex; flex-direction:column; gap:2px; max-height:180px; overflow-y:auto;}
-  .crew-item{display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line); font-size:0.95rem;}
-  .crew-item .dot{width:8px; height:8px; border-radius:50%; background:var(--bioglow); flex-shrink:0;}
-  .crew-item.you{color:var(--sand);}
-  .lobby-hint{color:var(--foam-dim); font-size:0.88rem; margin-top:18px; line-height:1.5;}
-  .lobby-leave{
-    background:none; border:none; color:var(--foam-dim); font-size:0.85rem; margin-top:14px;
-    cursor:pointer; text-decoration:underline; display:block; width:100%; text-align:center; padding:6px;
-  }
-  .lobby-leave:hover{color:var(--coral);}
 </style>
 </head>
 <body>
@@ -268,12 +220,12 @@
 <!-- HERO -->
 <section class="hero">
   <div class="stars" id="stars"></div>
-  <div class="eyebrow">Co-op survival, reef edition</div>
+  <div class="eyebrow">Solo survival, reef edition</div>
   <h1>Grow the <em>island.</em><br>Or lose it by dawn.</h1>
-  <p class="tagline">No boat. No hull to patch. Just a scrap of reef, whatever you can pull from the water, and everything that swims closer once the sun goes down.</p>
+  <p class="tagline">No boat. No crew. No one to split the work with. Just a scrap of reef, whatever you can pull from the water yourself, and everything that swims closer once the sun goes down.</p>
   <div class="hero-ctas">
     <a href="#signup" class="btn-primary">Wishlist on Steam</a>
-    <a href="#loop" class="btn-ghost" id="openLobbyBtn">▸ Watch the tide roll in</a>
+    <a href="#loop" class="btn-ghost">▸ Watch the tide roll in</a>
   </div>
 
   <div class="island-scene">
@@ -282,13 +234,13 @@
   </div>
 </section>
 
-<!-- CORE LOOP / SIGNATURE -->
+<!-- CORE LOOP -->
 <section class="cycle-section" id="loop">
   <div class="wrap">
     <div class="section-head">
       <div class="eyebrow">The core loop</div>
       <h2>Every island keeps two clocks.</h2>
-      <p>One while the water's calm. One after it isn't. Everything you do by day is a bet on what's coming at night.</p>
+      <p>One while the water's calm. One after it isn't. Everything you do by day is a bet on what's coming at night — and there's no one else to cover for you.</p>
     </div>
 
     <div class="cycle-grid">
@@ -297,21 +249,21 @@
           <span class="tag">DAY</span>
           <div>
             <h4>Reef, chop, haul</h4>
-            <p>Dive the shallows for coral and shellplate, fell the last palms, drag scrap off wrecks caught on your shoal. The island only gets bigger if someone's working.</p>
+            <p>Dive the shallows for coral and shellplate, fell the last palms, drag scrap off wrecks caught on your shoal. The island only gets bigger if you're the one working.</p>
           </div>
         </div>
         <div class="phase day">
           <span class="tag">DAY</span>
           <div>
             <h4>Raise the walls</h4>
-            <p>Stack driftwood barricades, sink a palisade ring, wire up a volcanic-glass alarm. Whatever you build today is the only thing standing between your crew and the tide line tonight.</p>
+            <p>Stack driftwood barricades, sink a palisade ring, wire up a volcanic-glass alarm. Whatever you build today is the only thing standing between you and the tide line tonight.</p>
           </div>
         </div>
         <div class="phase night">
           <span class="tag">NIGHT</span>
           <div>
             <h4>The tide brings them in</h4>
-            <p>The water glows, the temperature drops, and things that were driftwood a second ago start moving. Hold the perimeter until the horizon goes grey again.</p>
+            <p>The water glows, the temperature drops, and things that were driftwood a second ago start moving. Hold the perimeter alone until the horizon goes grey again.</p>
           </div>
         </div>
       </div>
@@ -341,7 +293,7 @@
     <div class="section-head">
       <div class="eyebrow">Gather</div>
       <h2>The reef is your quarry.</h2>
-      <p>No forests, no mines to speak of — just what the water gives up and what you're willing to dive for.</p>
+      <p>No forests, no mines to speak of — just what the water gives up and what you're willing to dive for, by yourself.</p>
     </div>
 
     <div class="resource-grid">
@@ -380,23 +332,20 @@
       <div>
         <div class="eyebrow" style="justify-content:flex-start; margin-bottom:16px;">Build &amp; defend</div>
         <h2 style="font-size:clamp(2rem,4vw,2.8rem); line-height:1.08;">A base is just a bet you made about tonight.</h2>
-        <p style="margin-top:20px; color:var(--foam-dim); line-height:1.65; max-width:480px;">Terrace the high ground, ring it in palisades, run a rope bridge to the lookout post. Nothing you place is permanent — the tide takes territory back if you let the walls rot.</p>
+        <p style="margin-top:20px; color:var(--foam-dim); line-height:1.65; max-width:480px;">Terrace the high ground, ring it in palisades, run a rope bridge to the lookout post. Nothing you place is permanent — the tide takes territory back if you let the walls rot, and there's no one to stand the second watch.</p>
         <div class="stat-row">
-          <div class="stat"><b>4</b><span>Players per shoal</span></div>
+          <div class="stat"><b>1</b><span>Survivor, no backup</span></div>
           <div class="stat"><b>9</b><span>Tiers of fortification</span></div>
-          <div class="stat"><b>∞</b><span>Ways it still falls</span></div>
+          <div class="stat"><b>100%</b><span>Of your loot, lost on death</span></div>
         </div>
       </div>
       <div>
         <svg viewBox="0 0 500 380" style="width:100%; height:auto;">
           <rect x="0" y="0" width="500" height="380" fill="none"/>
-          <!-- water -->
           <rect x="0" y="300" width="500" height="80" fill="#123a3e"/>
           <path d="M0,300 Q60,290 120,300 T240,300 T360,300 T500,300 L500,310 L0,310 Z" fill="#1f5f63" opacity="0.7"/>
-          <!-- island mound -->
           <path d="M60,300 Q100,180 220,175 Q340,168 420,240 Q460,270 440,300 Z" fill="#3a2a1f"/>
           <path d="M90,300 Q120,210 220,200 Q320,195 400,250 Q430,270 410,300 Z" fill="#4a3a28"/>
-          <!-- palisade -->
           <g stroke="#e7c989" stroke-width="4" opacity="0.9">
             <line x1="150" y1="230" x2="150" y2="185"/>
             <line x1="168" y1="222" x2="168" y2="177"/>
@@ -407,12 +356,38 @@
             <line x1="258" y1="216" x2="258" y2="172"/>
             <line x1="276" y1="222" x2="276" y2="178"/>
           </g>
-          <!-- lookout tower -->
           <rect x="330" y="120" width="10" height="90" fill="#8a6a4a"/>
           <rect x="315" y="95" width="40" height="30" fill="#6ef2b0" opacity="0.85"/>
           <rect x="315" y="95" width="40" height="30" fill="none" stroke="#0a1c1b" stroke-width="2"/>
-          <!-- glow spots -->
           <circle cx="335" cy="110" r="26" fill="#6ef2b0" opacity="0.15"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LOSS -->
+<section class="loss-section">
+  <div class="wrap">
+    <div class="loss-grid">
+      <div>
+        <div class="eyebrow" style="justify-content:flex-start; margin-bottom:0;">Death has a cost</div>
+        <h2 style="margin-top:16px; font-size:clamp(2rem,4vw,2.8rem); line-height:1.08;">Die, and the reef keeps everything.</h2>
+        <ul class="loss-list">
+          <li><span class="mark">＋</span><p><strong>No inventory saved.</strong> Whatever you were carrying stays exactly where you fell.</p></li>
+          <li><span class="mark">＋</span><p><strong>You wash up bare-handed</strong> on a different stretch of shoreline, with nothing but two fists and the tide clock still running.</p></li>
+          <li><span class="mark">＋</span><p><strong>Your old wreck doesn't wait.</strong> Scavengers smell an unguarded loot bag before you can swim back for it.</p></li>
+          <li><span class="mark">＋</span><p><strong>The island doesn't pause.</strong> Whatever killed you once is still out there, and dusk is still coming on schedule.</p></li>
+        </ul>
+      </div>
+      <div class="loss-visual">
+        <svg viewBox="0 0 340 340" style="width:100%; max-width:320px; height:auto;">
+          <circle cx="170" cy="170" r="150" fill="none" stroke="rgba(243,247,242,0.08)"/>
+          <circle cx="170" cy="170" r="110" fill="none" stroke="rgba(255,107,74,0.25)" stroke-dasharray="4 8"/>
+          <path d="M110,210 L130,150 L170,190 L210,140 L235,205 Z" fill="none" stroke="#e7c989" stroke-width="3" opacity="0.8"/>
+          <circle cx="130" cy="150" r="5" fill="#ff6b4a"/>
+          <circle cx="210" cy="140" r="5" fill="#ff6b4a"/>
+          <text x="170" y="285" text-anchor="middle" fill="#f3f7f2" opacity="0.55" font-family="IBM Plex Mono, monospace" font-size="11" letter-spacing="2">LAST KNOWN WRECK</text>
         </svg>
       </div>
     </div>
@@ -425,47 +400,35 @@
     <div class="section-head">
       <div class="eyebrow">What rises at night</div>
       <h2>They don't attack the island. They evict you from it.</h2>
-      <p>Threat rises the longer you camp one shoal. Move, fortify, or eventually meet all four.</p>
+      <p>Threat rises the longer you camp one shoal. Move, fortify, or eventually meet all five — alone.</p>
     </div>
 
     <div class="enemy-list">
       <div class="enemy-row">
         <span class="glyph">SPECIES 01</span>
-        <div><h4>Tideborn</h4><p>Wash ashore alone at the first dark. Slow, dumb, easy to wall off — until there are twenty of them.</p></div>
+        <div><h4>Tideborn</h4><p>Wash ashore alone at the first dark. Slow, dumb, easy to wall off — until there are twenty of them and only one of you.</p></div>
         <div class="threat"><i class="on"></i><i></i><i></i><i></i></div>
       </div>
       <div class="enemy-row">
         <span class="glyph">SPECIES 02</span>
-        <div><h4>Reef Wraiths</h4><p>Camouflage against coral until they're inside your palisade. Post a lookout or lose a wall from the inside.</p></div>
+        <div><h4>Reef Wraiths</h4><p>Camouflage against coral until they're inside your palisade. No one else is watching your back, so you'd better be.</p></div>
         <div class="threat"><i class="on"></i><i class="on"></i><i></i><i></i></div>
       </div>
       <div class="enemy-row">
         <span class="glyph">SPECIES 03</span>
-        <div><h4>Brinehulks</h4><p>Slow, armored, drawn to the loudest structure you own. Shellplate walls or a lot of running.</p></div>
+        <div><h4>Brinehulks</h4><p>Slow, armored, drawn to the loudest structure you own. Shellplate walls, or a lot of running on your own two legs.</p></div>
         <div class="threat"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
       </div>
       <div class="enemy-row">
         <span class="glyph">SPECIES 04</span>
+        <div><h4>Scavenger Crews</h4><p>The only threat that plans. They case your walls at dusk and hit hardest the moment you're off diving the far reef.</p></div>
+        <div class="threat"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+      </div>
+      <div class="enemy-row">
+        <span class="glyph">SPECIES 05</span>
         <div><h4>The Undertow</h4><p>Doesn't come ashore. Just pulls the shoreline back a few meters, every visit, until there's no island left to defend.</p></div>
         <div class="threat"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- CO-OP -->
-<section class="coop-section">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">Bring a crew</div>
-      <h2>One island. As many hands as you can talk into it.</h2>
-      <p>Split the work — someone dives, someone builds, someone stands the wall — or don't, and find out what an unguarded shoreline costs.</p>
-    </div>
-    <div class="crew-row">
-      <div class="crew-avatar" style="background:#e7c989;">R</div>
-      <div class="crew-avatar" style="background:#ff6b4a;">D</div>
-      <div class="crew-avatar" style="background:#6ef2b0;">K</div>
-      <div class="crew-avatar" style="background:#1f5f63; color:var(--foam);">+1</div>
     </div>
   </div>
 </section>
@@ -479,68 +442,16 @@
     <a href="#" class="btn-ghost">Join the Discord</a>
   </div>
   <div class="platforms">
-    <span>WINDOWS</span><span>·</span><span>STEAM DECK VERIFIED</span><span>·</span><span>CO-OP UP TO 4</span>
+    <span>WINDOWS</span><span>·</span><span>STEAM DECK VERIFIED</span><span>·</span><span>SINGLEPLAYER</span>
   </div>
 </section>
 
 <footer>
-  <div>ATOLL — a co-op survival game</div>
+  <div>ATOLL — a solo survival game</div>
   <div>© 2026, built on the reef</div>
 </footer>
 
-<div class="lobby-overlay" id="lobbyOverlay">
-  <div class="lobby-modal">
-    <button class="lobby-close" id="lobbyClose" aria-label="Close">&times;</button>
-
-    <div id="lobbyHome">
-      <div class="eyebrow" style="justify-content:flex-start; margin-bottom:0;">Find your crew</div>
-      <h3>Raise a shoal, or join one already rising.</h3>
-
-      <div class="lobby-tabs">
-        <button class="lobby-tab active" data-tab="host">Host a shoal</button>
-        <button class="lobby-tab" data-tab="join">Join a shoal</button>
-      </div>
-
-      <div class="lobby-pane" id="paneHost">
-        <label for="hostName">Your name</label>
-        <input id="hostName" maxlength="16" placeholder="Captain Kai">
-        <button class="btn-primary" id="createBtn" style="width:100%; margin-top:18px;">Create shoal</button>
-        <p class="lobby-error" id="createError"></p>
-      </div>
-
-      <div class="lobby-pane" id="paneJoin" style="display:none;">
-        <label for="joinName">Your name</label>
-        <input id="joinName" maxlength="16" placeholder="Captain Kai">
-        <label for="joinCode" style="margin-top:14px;">Shoal code</label>
-        <input id="joinCode" maxlength="5" placeholder="X7QJP" style="text-transform:uppercase;">
-        <button class="btn-primary" id="joinBtn" style="width:100%; margin-top:18px;">Join shoal</button>
-        <p class="lobby-error" id="joinError"></p>
-      </div>
-    </div>
-
-    <div id="lobbyRoom" style="display:none;">
-      <div class="eyebrow" style="justify-content:flex-start; margin-bottom:0;">Shoal code</div>
-      <div class="room-code" id="roomCodeDisplay">-----</div>
-      <button class="btn-ghost" id="copyCodeBtn" style="margin-top:14px; padding:10px 20px; font-size:0.85rem;">Copy code</button>
-
-      <div class="crew-list" id="crewList"></div>
-
-      <p class="lobby-hint" id="hostHint">Waiting for more hands on deck…</p>
-      <button class="btn-primary" id="startBtn" style="width:100%; margin-top:20px;">Start the voyage</button>
-      <button class="lobby-leave" id="leaveBtn">Leave shoal</button>
-    </div>
-
-    <div id="lobbyLaunch" style="display:none; text-align:center;">
-      <div class="eyebrow" style="justify-content:center;">Casting off</div>
-      <h3>The tide's taking your crew out.</h3>
-      <p style="color:var(--foam-dim); margin-top:12px; line-height:1.6;">ATOLL itself isn't live yet — so consider this shoal reserved. Every name in this crew gets an invite the moment the gates open.</p>
-      <button class="lobby-leave" id="closeLaunchBtn">Close</button>
-    </div>
-  </div>
-</div>
-
 <script>
-  // stars
   const starsEl = document.getElementById('stars');
   for(let i=0;i<60;i++){
     const s = document.createElement('div');
@@ -551,7 +462,6 @@
     starsEl.appendChild(s);
   }
 
-  // tide clock indicator — slow sweep tied to scroll into view, then idle drift
   const indicator = document.getElementById('tideIndicator');
   let angle = 0;
   function animateClock(){
@@ -562,171 +472,6 @@
   if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
     requestAnimationFrame(animateClock);
   }
-
-  // ---------- LOBBY (create / join a game with friends) ----------
-  (function(){
-    const overlay = document.getElementById('lobbyOverlay');
-    const openBtn = document.getElementById('openLobbyBtn');
-    const closeBtn = document.getElementById('lobbyClose');
-    const home = document.getElementById('lobbyHome');
-    const roomView = document.getElementById('lobbyRoom');
-    const launchView = document.getElementById('lobbyLaunch');
-    const tabs = document.querySelectorAll('.lobby-tab');
-    const paneHost = document.getElementById('paneHost');
-    const paneJoin = document.getElementById('paneJoin');
-    const createError = document.getElementById('createError');
-    const joinError = document.getElementById('joinError');
-
-    const storageReady = typeof window.storage !== 'undefined';
-    const myId = 'p' + Math.random().toString(36).slice(2, 9);
-    let currentCode = null;
-    let isHost = false;
-    let pollTimer = null;
-
-    function resetToHome(){
-      if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
-      currentCode = null; isHost = false;
-      roomView.style.display = 'none';
-      launchView.style.display = 'none';
-      home.style.display = 'block';
-    }
-
-    openBtn.addEventListener('click', (e)=>{
-      e.preventDefault();
-      overlay.classList.add('open');
-      if(!storageReady){
-        createError.textContent = 'This lobby only works when the page is opened inside Claude.';
-        joinError.textContent = 'This lobby only works when the page is opened inside Claude.';
-      }
-    });
-    closeBtn.addEventListener('click', ()=> overlay.classList.remove('open'));
-    overlay.addEventListener('click', (e)=>{ if(e.target === overlay) overlay.classList.remove('open'); });
-    document.getElementById('closeLaunchBtn').addEventListener('click', ()=>{
-      overlay.classList.remove('open');
-      resetToHome();
-    });
-
-    tabs.forEach(t => t.addEventListener('click', ()=>{
-      tabs.forEach(x => x.classList.remove('active'));
-      t.classList.add('active');
-      const hostMode = t.dataset.tab === 'host';
-      paneHost.style.display = hostMode ? 'block' : 'none';
-      paneJoin.style.display = hostMode ? 'none' : 'block';
-    }));
-
-    function genCode(){
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let c = '';
-      for(let i = 0; i < 5; i++) c += chars[Math.floor(Math.random() * chars.length)];
-      return c;
-    }
-
-    async function saveRoom(code, room){
-      return await window.storage.set('room:' + code, JSON.stringify(room), true);
-    }
-    async function loadRoom(code){
-      try{
-        const res = await window.storage.get('room:' + code, true);
-        return res ? JSON.parse(res.value) : null;
-      }catch(e){ return null; }
-    }
-
-    function renderCrew(players){
-      const el = document.getElementById('crewList');
-      el.innerHTML = '';
-      players.forEach(p=>{
-        const row = document.createElement('div');
-        row.className = 'crew-item' + (p.id === myId ? ' you' : '');
-        row.innerHTML = '<span class="dot"></span><span>' + p.name + (p.id === myId ? ' (you)' : '') + '</span>';
-        el.appendChild(row);
-      });
-    }
-
-    function enterRoom(room){
-      home.style.display = 'none';
-      launchView.style.display = 'none';
-      roomView.style.display = 'block';
-      document.getElementById('roomCodeDisplay').textContent = room.code;
-      document.getElementById('startBtn').style.display = isHost ? 'block' : 'none';
-      document.getElementById('hostHint').textContent = isHost
-        ? 'Share the code — start whenever your crew is ready.'
-        : 'Waiting on the host to start the voyage…';
-      renderCrew(room.players);
-      if(pollTimer) clearInterval(pollTimer);
-      pollTimer = setInterval(pollRoom, 2500);
-    }
-
-    async function pollRoom(){
-      if(!currentCode) return;
-      const room = await loadRoom(currentCode);
-      if(!room) return;
-      renderCrew(room.players);
-      if(room.status === 'started'){
-        clearInterval(pollTimer); pollTimer = null;
-        roomView.style.display = 'none';
-        launchView.style.display = 'block';
-      }
-    }
-
-    document.getElementById('createBtn').addEventListener('click', async ()=>{
-      if(!storageReady) return;
-      createError.textContent = '';
-      const name = document.getElementById('hostName').value.trim() || 'Captain';
-      const code = genCode();
-      const room = { code, host: myId, status: 'lobby', createdAt: Date.now(), players: [{ id: myId, name }] };
-      try{
-        await saveRoom(code, room);
-        currentCode = code; isHost = true;
-        enterRoom(room);
-      }catch(e){
-        createError.textContent = 'Could not create a shoal — try again.';
-      }
-    });
-
-    document.getElementById('joinBtn').addEventListener('click', async ()=>{
-      if(!storageReady) return;
-      joinError.textContent = '';
-      const name = document.getElementById('joinName').value.trim() || 'Deckhand';
-      const code = document.getElementById('joinCode').value.trim().toUpperCase();
-      if(!code){ joinError.textContent = 'Enter a shoal code.'; return; }
-      const room = await loadRoom(code);
-      if(!room){ joinError.textContent = 'No shoal found with that code.'; return; }
-      if(!room.players.find(p => p.id === myId)){
-        room.players.push({ id: myId, name });
-      }
-      try{
-        await saveRoom(code, room);
-        currentCode = code; isHost = (room.host === myId);
-        enterRoom(room);
-      }catch(e){
-        joinError.textContent = 'Could not join — try again.';
-      }
-    });
-
-    document.getElementById('startBtn').addEventListener('click', async ()=>{
-      if(!currentCode) return;
-      const room = await loadRoom(currentCode);
-      if(!room) return;
-      room.status = 'started';
-      await saveRoom(currentCode, room);
-      clearInterval(pollTimer); pollTimer = null;
-      roomView.style.display = 'none';
-      launchView.style.display = 'block';
-    });
-
-    document.getElementById('leaveBtn').addEventListener('click', resetToHome);
-
-    document.getElementById('copyCodeBtn').addEventListener('click', ()=>{
-      if(!currentCode) return;
-      const btn = document.getElementById('copyCodeBtn');
-      const old = btn.textContent;
-      if(navigator.clipboard){
-        navigator.clipboard.writeText(currentCode).catch(()=>{});
-      }
-      btn.textContent = 'Copied!';
-      setTimeout(()=> btn.textContent = old, 1500);
-    });
-  })();
 </script>
 
 </body>
