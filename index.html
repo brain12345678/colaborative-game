@@ -702,6 +702,20 @@
       });
     }
 
+    function refreshSharedPlayersFromRoom(){
+      const currentRoomCode = roomCode || readRoomCodeFromUrl();
+      const roomState = loadRoomState(currentRoomCode) || null;
+      const basePlayers = (roomState && roomState.players) || sharedPlayers || [];
+      sharedPlayers = basePlayers.map((entry, index)=>({
+        ...entry,
+        name: entry.name || `Player ${index + 1}`,
+        color: entry.color || getPlayerColor(index),
+        x: entry.x ?? cx + (index - (Math.max(1, basePlayers.length) - 1) / 2) * 34,
+        y: entry.y ?? cy + 80 + (index % 2) * 10
+      }));
+      return sharedPlayers;
+    }
+
     function initGame(){
       const roomState = loadRoomState(roomCode || readRoomCodeFromUrl());
       const players = roomState?.players || [];
@@ -709,13 +723,7 @@
       const slot = playerIndex >= 0 ? playerIndex : 0;
       localPlayerColor = ['#ff6b4a', '#e7c989', '#6ef2b0', '#8cbaff'][slot % 4];
       player = { x: cx, y: cy, tx: cx, ty: cy, speed: 130, hp: 100, maxHp: 100, attackCd: 0, name: localPlayerName || 'Captain', color: localPlayerColor };
-      sharedPlayers = players.map((entry, index)=>({
-        ...entry,
-        name: entry.name || `Player ${index + 1}`,
-        color: entry.color || getPlayerColor(index),
-        x: entry.x ?? cx + (index - (Math.max(1, players.length) - 1) / 2) * 34,
-        y: entry.y ?? cy + 80 + (index % 2) * 10
-      }));
+      refreshSharedPlayersFromRoom();
       resources = { wood: 2, coral: 0, ore: 0 };
       nodes = makeNodes();
       walls = [];
@@ -852,7 +860,13 @@
         players: players.slice(0, 4)
       };
       saveRoomState(nextRoomState);
-      sharedPlayers = nextRoomState.players;
+      sharedPlayers = nextRoomState.players.map((entry, index)=>({
+        ...entry,
+        name: entry.name || `Player ${index + 1}`,
+        color: entry.color || getPlayerColor(index),
+        x: entry.x ?? cx + (index - (Math.max(1, nextRoomState.players.length) - 1) / 2) * 34,
+        y: entry.y ?? cy + 80 + (index % 2) * 10
+      }));
     }
 
     function renderLobbyState(roomState){
@@ -1149,14 +1163,7 @@
       });
 
       // shared players
-      const roomState = loadRoomState(roomCode || readRoomCodeFromUrl());
-      const players = (roomState?.players || sharedPlayers || []).map((entry, index)=>({
-        ...entry,
-        name: entry.name || `Player ${index + 1}`,
-        color: entry.color || getPlayerColor(index),
-        x: entry.x ?? cx + (index - (Math.max(1, (roomState?.players || sharedPlayers || []).length) - 1) / 2) * 34,
-        y: entry.y ?? cy + 80 + (index % 2) * 10
-      }));
+      const players = refreshSharedPlayersFromRoom();
       players.forEach((entry, index)=>{
         ctx.beginPath();
         ctx.arc(entry.x, entry.y, 8, 0, Math.PI * 2);
