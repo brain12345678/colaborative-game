@@ -539,16 +539,17 @@
     <div class="eyebrow">Multiplayer lock-in</div>
     <h2>Lock your crew in before the tide turns.</h2>
     <p>Choose a captain, share a room key, and hold the reef together with up to three crewmates.</p>
+    <p id="inviteHint" style="margin-top:14px; color:var(--foam-dim); font-size:0.9rem; line-height:1.5;">Share the room code or this link with friends. Anyone using the same room can join.</p>
 
     <form class="lobby-form" id="lobbyForm">
-      <input id="playerNameInput" type="text" maxlength="18" placeholder="Captain name" required>
-      <input id="roomCodeInput" type="text" maxlength="6" placeholder="Room code (optional)" autocomplete="off">
+      <input id="playerNameInput" type="text" maxlength="18" placeholder="Your name" required>
+      <input id="roomCodeInput" type="text" maxlength="6" placeholder="Room code" autocomplete="off" required>
       <select id="crewSizeInput">
         <option value="2">2 players</option>
         <option value="3">3 players</option>
         <option value="4">4 players</option>
       </select>
-      <button type="submit" class="btn-primary">Lock in crew</button>
+      <button type="submit" class="btn-primary">Create / join room</button>
     </form>
 
     <div class="lobby-status" id="lobbyStatus" hidden>
@@ -657,6 +658,8 @@
     const playerList = document.getElementById('playerList');
     const launchGameBtn = document.getElementById('launchGameBtn');
     const closeLobbyBtn = document.getElementById('closeLobbyBtn');
+    const inviteHint = document.getElementById('inviteHint');
+    const storageKey = 'atoll-room-state-v1';
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
@@ -771,13 +774,61 @@
       }
     });
 
+    function readRoomCodeFromUrl(){
+      const params = new URLSearchParams(window.location.search);
+      return (params.get('room') || '').trim().toUpperCase();
+    }
+
+    function getRoomUrl(roomCode){
+      const url = new URL(window.location.href);
+      url.searchParams.set('room', roomCode);
+      return url.toString();
+    }
+
+    function loadRoomState(roomCode){
+      try {
+        const raw = localStorage.getItem(storageKey + ':' + roomCode);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function saveRoomState(roomState){
+      localStorage.setItem(storageKey + ':' + roomState.roomCode, JSON.stringify(roomState));
+    }
+
+    function renderLobbyState(roomState){
+      if(!roomState){
+        lobbyStatus.hidden = true;
+        playerList.innerHTML = '<div class="player-pill ready">Captain • Ready</div><div class="player-pill">Crewmate • Waiting</div>';
+        inviteHint.textContent = 'Share the room code or this link with friends. Anyone using the same room can join.';
+        return;
+      }
+      lobbyStatus.hidden = false;
+      roomCodeDisplay.textContent = roomState.roomCode;
+      captainDisplay.textContent = roomState.captain || roomState.players[0]?.name || '—';
+      crewDisplay.textContent = `${Math.min(roomState.players.length, 4)} / 4`;
+      playerList.innerHTML = roomState.players.map((player, index)=>{
+        const cls = index === 0 ? 'player-pill ready' : 'player-pill';
+        const label = index === 0 ? 'Captain' : 'Crewmate';
+        return `<div class="${cls}">${player.name} • ${label}</div>`;
+      }).join('');
+      inviteHint.textContent = `Share this room code: ${roomState.roomCode}. Anyone opening ${getRoomUrl(roomState.roomCode)} can join.`;
+    }
+
     function openLobby(){
       lobbyOverlay.classList.add('open');
-      lobbyStatus.hidden = true;
+      const initialRoom = readRoomCodeFromUrl();
       playerNameInput.value = '';
-      roomCodeInput.value = '';
+      roomCodeInput.value = initialRoom || '';
       crewSizeInput.value = '2';
-      playerList.innerHTML = '<div class="player-pill ready">Captain • Ready</div><div class="player-pill">Crewmate • Waiting</div>';
+      if(initialRoom){
+        const roomState = loadRoomState(initialRoom);
+        renderLobbyState(roomState);
+      } else {
+        renderLobbyState(null);
+      }
     }
 
     function openGame(){
@@ -800,18 +851,22 @@
       e.preventDefault();
       const captain = playerNameInput.value.trim() || 'Captain';
       const roomCode = (roomCodeInput.value.trim() || 'ATOLL' + Math.floor(100 + Math.random()*900)).toUpperCase();
-      const crewSize = Number(crewSizeInput.value);
-      roomCodeDisplay.textContent = roomCode;
-      captainDisplay.textContent = captain;
-      crewDisplay.textContent = `${Math.min(crewSize, 4)} / 4`;
-      const pills = [];
-      pills.push(`<div class="player-pill ready">${captain} • Captain</div>`);
-      for(let i = 1; i < Math.min(crewSize, 4); i++){
-        pills.push(`<div class="player-pill">Crewmate ${i} • Waiting</div>`);
+      const crewSize = Math.min(4, Number(crewSizeInput.value) || 2);
+      const existing = loadRoomState(roomCode) || { roomCode, players: [], crewSize };
+      const players = existing.players || [];
+      if(!players.some(player => player.name.toLowerCase() === captain.toLowerCase())){
+        players.push({ name: captain, role: players.length === 0 ? 'Captain' : 'Crewmate' });
       }
-      playerList.innerHTML = pills.join('');
-      lobbyStatus.hidden = false;
+      const roomState = {
+        roomCode,
+        captain: players[0]?.name || captain,
+        crewSize,
+        players: players.slice(0, 4)
+      };
+      saveRoomState(roomState);
       roomCodeInput.value = roomCode;
+      window.history.replaceState({}, '', getRoomUrl(roomCode));
+      renderLobbyState(roomState);
     });
     document.getElementById('retryBtn').addEventListener('click', ()=>{
       initGame();
