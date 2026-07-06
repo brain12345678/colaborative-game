@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATOLL — Hold the Tide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#0a1c1b;
+    --tide-navy:#123a3e;
+    --lagoon:#1f5f63;
+    --sand:#e7c989;
+    --coral:#ff6b4a;
+    --bioglow:#6ef2b0;
+    --foam:#f3f7f2;
+    --foam-dim:rgba(243,247,242,0.62);
+    --line:rgba(243,247,242,0.14);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--abyss);
+    color:var(--foam);
+    font-family:'Inter',sans-serif;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--coral); color:var(--abyss);}
+  h1,h2,h3{font-family:'Fraunces',serif; font-weight:600; letter-spacing:-0.01em;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1180px; margin:0 auto; padding:0 32px;}
+  @media(max-width:640px){.wrap{padding:0 20px;}}
+
+  /* subtle grain */
+  .grain{
+    position:fixed; inset:0; pointer-events:none; z-index:200;
+    opacity:0.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- NAV ---------- */
+  nav{
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 32px;
+    backdrop-filter:blur(10px);
+    background:linear-gradient(to bottom, rgba(10,28,27,0.85), transparent);
+  }
+  .logo{font-family:'Fraunces',serif; font-weight:700; font-size:1.3rem; letter-spacing:0.02em;}
+  .logo span{color:var(--bioglow);}
+  .nav-cta{
+    border:1px solid var(--foam-dim); padding:9px 20px; border-radius:2px;
+    font-size:0.82rem; letter-spacing:0.06em; text-transform:uppercase;
+    transition:border-color .2s, background .2s;
+  }
+  .nav-cta:hover{border-color:var(--bioglow); background:rgba(110,242,176,0.08);}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative; min-height:100vh; display:flex; flex-direction:column;
+    justify-content:center; align-items:center; text-align:center;
+    padding:140px 24px 80px;
+    background:
+      radial-gradient(ellipse 90% 55% at 50% 8%, rgba(31,95,99,0.55), transparent 60%),
+      linear-gradient(to bottom, var(--abyss) 0%, #0d2624 55%, var(--tide-navy) 100%);
+    overflow:hidden;
+  }
+  .stars{position:absolute; inset:0; z-index:0;}
+  .star{position:absolute; width:2px; height:2px; background:var(--foam); border-radius:50%; opacity:0.5; animation:twinkle 4s ease-in-out infinite;}
+  @keyframes twinkle{0%,100%{opacity:0.15;} 50%{opacity:0.75;}}
+
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:0.75rem; letter-spacing:0.22em;
+    text-transform:uppercase; color:var(--bioglow); margin-bottom:22px; z-index:2;
+    display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before, .eyebrow::after{content:''; width:24px; height:1px; background:var(--bioglow); opacity:0.6;}
+
+  .hero h1{
+    font-size:clamp(3.2rem, 9vw, 7.2rem); line-height:0.95; z-index:2;
+    color:var(--foam);
+  }
+  .hero h1 em{font-style:normal; color:var(--sand);}
+  .hero p.tagline{
+    max-width:560px; margin:26px auto 0; font-size:1.08rem; line-height:1.6;
+    color:var(--foam-dim); z-index:2; font-weight:400;
+  }
+  .hero-ctas{display:flex; gap:16px; margin-top:40px; z-index:2; flex-wrap:wrap; justify-content:center;}
+  .btn-primary{
+    background:var(--coral); color:var(--abyss); padding:15px 32px; border-radius:2px;
+    font-weight:600; font-size:0.95rem; letter-spacing:0.02em; transition:transform .2s, box-shadow .2s;
+    box-shadow:0 0 0 rgba(255,107,74,0);
+  }
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 8px 24px rgba(255,107,74,0.35);}
+  .btn-ghost{
+    border:1px solid var(--foam-dim); padding:15px 32px; border-radius:2px;
+    font-weight:500; font-size:0.95rem; transition:border-color .2s, background .2s;
+    display:flex; align-items:center; gap:8px;
+  }
+  .btn-ghost:hover{border-color:var(--foam); background:rgba(255,255,255,0.05);}
+
+  /* island silhouette + water */
+  .island-scene{position:absolute; bottom:0; left:0; right:0; height:46%; z-index:1;}
+  .water{
+    position:absolute; bottom:0; left:0; width:200%; height:70px;
+  }
+  .water path{fill:var(--lagoon);}
+  .water.w1{animation:drift 18s linear infinite; opacity:0.55; bottom:14px;}
+  .water.w2{animation:drift 26s linear infinite reverse; opacity:0.85; bottom:0;}
+  @keyframes drift{from{transform:translateX(0);} to{transform:translateX(-50%);}}
+
+  /* ---------- SECTION SHARED ---------- */
+  section{padding:120px 0; position:relative;}
+  .section-head{max-width:640px; margin-bottom:64px;}
+  .section-head .eyebrow{justify-content:flex-start; margin-bottom:16px;}
+  .section-head .eyebrow::after{display:none;}
+  .section-head h2{font-size:clamp(2.1rem, 4vw, 3rem); line-height:1.05; color:var(--foam);}
+  .section-head p{margin-top:18px; color:var(--foam-dim); font-size:1.05rem; line-height:1.65; max-width:520px;}
+
+  /* ---------- CYCLE (signature element) ---------- */
+  .cycle-section{background:#0d2624; border-top:1px solid var(--line); border-bottom:1px solid var(--line);}
+  .cycle-grid{display:grid; grid-template-columns:1fr 1.1fr; gap:60px; align-items:center;}
+  @media(max-width:860px){.cycle-grid{grid-template-columns:1fr;}}
+  .cycle-copy .phase{
+    display:flex; gap:18px; padding:20px 0; border-top:1px solid var(--line);
+  }
+  .cycle-copy .phase:last-child{border-bottom:1px solid var(--line);}
+  .phase .tag{
+    font-family:'IBM Plex Mono',monospace; font-size:0.7rem; letter-spacing:0.12em;
+    padding:4px 10px; border-radius:2px; height:fit-content; white-space:nowrap; margin-top:3px;
+  }
+  .phase.day .tag{background:rgba(231,201,137,0.15); color:var(--sand);}
+  .phase.night .tag{background:rgba(110,242,176,0.15); color:var(--bioglow);}
+  .phase h4{font-size:1.15rem; margin-bottom:6px; font-weight:600; font-family:'Inter',sans-serif;}
+  .phase p{color:var(--foam-dim); font-size:0.95rem; line-height:1.55;}
+
+  .clock-wrap{display:flex; justify-content:center;}
+  .tide-clock{width:100%; max-width:380px;}
+
+  /* ---------- GATHER (resource grid) ---------- */
+  .resource-grid{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:1px;
+    background:var(--line); border:1px solid var(--line);
+  }
+  @media(max-width:760px){.resource-grid{grid-template-columns:repeat(2,1fr);}}
+  .resource{
+    background:var(--abyss); padding:32px 26px; transition:background .25s;
+    position:relative; min-height:190px; display:flex; flex-direction:column; justify-content:space-between;
+  }
+  .resource:hover{background:#0f2b29;}
+  .resource .num{font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:var(--foam-dim); letter-spacing:0.08em;}
+  .resource h4{font-size:1.25rem; margin-top:auto; font-weight:600; font-family:'Fraunces',serif;}
+  .resource p{color:var(--foam-dim); font-size:0.88rem; margin-top:8px; line-height:1.5;}
+
+  /* ---------- BUILD & DEFEND ---------- */
+  .build-section{background:linear-gradient(180deg, #0a1c1b, #10302e);}
+  .build-grid{display:grid; grid-template-columns:1fr 1fr; gap:70px; align-items:center;}
+  @media(max-width:860px){.build-grid{grid-template-columns:1fr; gap:40px;}}
+  .stat-row{display:flex; gap:36px; margin-top:36px; flex-wrap:wrap;}
+  .stat-row .stat b{display:block; font-family:'Fraunces',serif; font-size:2rem; color:var(--sand);}
+  .stat-row .stat span{font-size:0.82rem; color:var(--foam-dim); text-transform:uppercase; letter-spacing:0.06em;}
+
+  /* ---------- ENEMIES ---------- */
+  .enemy-section{background:var(--abyss);}
+  .enemy-list{border-top:1px solid var(--line);}
+  .enemy-row{
+    display:grid; grid-template-columns:120px 1fr 220px; gap:24px; align-items:center;
+    padding:26px 0; border-bottom:1px solid var(--line); transition:padding-left .25s;
+  }
+  .enemy-row:hover{padding-left:12px; background:rgba(110,242,176,0.03);}
+  @media(max-width:700px){.enemy-row{grid-template-columns:70px 1fr; }
+    .enemy-row .threat{display:none;}}
+  .enemy-row .glyph{font-family:'IBM Plex Mono',monospace; font-size:0.75rem; color:var(--bioglow); letter-spacing:0.05em;}
+  .enemy-row h4{font-family:'Fraunces',serif; font-size:1.3rem; margin-bottom:6px;}
+  .enemy-row p{color:var(--foam-dim); font-size:0.92rem; line-height:1.5; max-width:480px;}
+  .threat{display:flex; gap:5px; justify-content:flex-end;}
+  .threat i{width:8px; height:8px; background:var(--line); border-radius:1px;}
+  .threat i.on{background:var(--coral);}
+
+  /* ---------- CO-OP ---------- */
+  .coop-section{
+    background:radial-gradient(ellipse 80% 60% at 50% 100%, rgba(255,107,74,0.14), transparent 65%), #0d2624;
+    text-align:center; border-top:1px solid var(--line);
+  }
+  .coop-section .section-head{margin-left:auto; margin-right:auto; text-align:center;}
+  .coop-section .section-head .eyebrow{justify-content:center;}
+  .coop-section .section-head .eyebrow::after{display:flex; content:''; width:24px; height:1px; background:var(--bioglow); opacity:0.6;}
+  .crew-row{display:flex; justify-content:center; gap:-10px; margin:44px 0; position:relative;}
+  .crew-avatar{
+    width:64px; height:64px; border-radius:50%; border:2px solid var(--abyss);
+    margin-left:-16px; display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces',serif; font-weight:600; font-size:1.1rem; color:var(--abyss);
+  }
+  .crew-avatar:first-child{margin-left:0;}
+
+  /* ---------- FINAL CTA ---------- */
+  .final-cta{
+    text-align:center; padding:140px 24px;
+    background:linear-gradient(180deg, #0d2624, var(--abyss));
+  }
+  .final-cta h2{font-size:clamp(2.4rem, 6vw, 4rem); max-width:720px; margin:0 auto 28px; line-height:1.05;}
+  .final-cta .platforms{margin-top:36px; display:flex; gap:22px; justify-content:center; color:var(--foam-dim); font-size:0.85rem; letter-spacing:0.05em;}
+
+  footer{
+    border-top:1px solid var(--line); padding:36px 32px; display:flex; justify-content:space-between;
+    align-items:center; flex-wrap:wrap; gap:16px; font-size:0.82rem; color:var(--foam-dim);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .water, .star, .tide-indicator{animation:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<nav>
+  <div class="logo">ATOLL<span>.</span></div>
+  <a href="#signup" class="nav-cta">Wishlist</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="stars" id="stars"></div>
+  <div class="eyebrow">Co-op survival, reef edition</div>
+  <h1>Grow the <em>island.</em><br>Or lose it by dawn.</h1>
+  <p class="tagline">No boat. No hull to patch. Just a scrap of reef, whatever you can pull from the water, and everything that swims closer once the sun goes down.</p>
+  <div class="hero-ctas">
+    <a href="#signup" class="btn-primary">Wishlist on Steam</a>
+    <a href="#loop" class="btn-ghost">▸ Watch the tide roll in</a>
+  </div>
+
+  <div class="island-scene">
+    <svg class="water w1" viewBox="0 0 1600 70" preserveAspectRatio="none"><path d="M0,30 Q200,0 400,30 T800,30 T1200,30 T1600,30 L1600,70 L0,70 Z"/></svg>
+    <svg class="water w2" viewBox="0 0 1600 70" preserveAspectRatio="none"><path d="M0,20 Q200,45 400,20 T800,20 T1200,20 T1600,20 L1600,70 L0,70 Z"/></svg>
+  </div>
+</section>
+
+<!-- CORE LOOP / SIGNATURE -->
+<section class="cycle-section" id="loop">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">The core loop</div>
+      <h2>Every island keeps two clocks.</h2>
+      <p>One while the water's calm. One after it isn't. Everything you do by day is a bet on what's coming at night.</p>
+    </div>
+
+    <div class="cycle-grid">
+      <div class="cycle-copy">
+        <div class="phase day">
+          <span class="tag">DAY</span>
+          <div>
+            <h4>Reef, chop, haul</h4>
+            <p>Dive the shallows for coral and shellplate, fell the last palms, drag scrap off wrecks caught on your shoal. The island only gets bigger if someone's working.</p>
+          </div>
+        </div>
+        <div class="phase day">
+          <span class="tag">DAY</span>
+          <div>
+            <h4>Raise the walls</h4>
+            <p>Stack driftwood barricades, sink a palisade ring, wire up a volcanic-glass alarm. Whatever you build today is the only thing standing between your crew and the tide line tonight.</p>
+          </div>
+        </div>
+        <div class="phase night">
+          <span class="tag">NIGHT</span>
+          <div>
+            <h4>The tide brings them in</h4>
+            <p>The water glows, the temperature drops, and things that were driftwood a second ago start moving. Hold the perimeter until the horizon goes grey again.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="clock-wrap">
+        <svg class="tide-clock" viewBox="0 0 380 380">
+          <circle cx="190" cy="190" r="150" fill="none" stroke="rgba(243,247,242,0.08)" stroke-width="1"/>
+          <path d="M 190 40 A 150 150 0 0 1 190 340" fill="none" stroke="#e7c989" stroke-width="2" opacity="0.5"/>
+          <path d="M 190 340 A 150 150 0 0 1 190 40" fill="none" stroke="#6ef2b0" stroke-width="2" opacity="0.5"/>
+          <text x="190" y="30" text-anchor="middle" fill="#e7c989" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="2">DAY</text>
+          <text x="190" y="362" text-anchor="middle" fill="#6ef2b0" font-family="IBM Plex Mono, monospace" font-size="12" letter-spacing="2">NIGHT</text>
+          <g id="tideIndicator" style="transform-origin:190px 190px;">
+            <line x1="190" y1="190" x2="190" y2="46" stroke="#f3f7f2" stroke-width="2"/>
+            <circle cx="190" cy="46" r="6" fill="#f3f7f2"/>
+          </g>
+          <circle cx="190" cy="190" r="4" fill="#f3f7f2"/>
+          <circle cx="190" cy="190" r="90" fill="none" stroke="rgba(243,247,242,0.06)" stroke-width="1" stroke-dasharray="2 6"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GATHER -->
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Gather</div>
+      <h2>The reef is your quarry.</h2>
+      <p>No forests, no mines to speak of — just what the water gives up and what you're willing to dive for.</p>
+    </div>
+
+    <div class="resource-grid">
+      <div class="resource">
+        <span class="num">01</span>
+        <div><h4>Driftwood</h4><p>Washes up daily. Your first walls, your first raft-dock, your first mistake.</p></div>
+      </div>
+      <div class="resource">
+        <span class="num">02</span>
+        <div><h4>Reef Coral</h4><p>Hardens in open air. Brittle alone, load-bearing once fused with resin.</p></div>
+      </div>
+      <div class="resource">
+        <span class="num">03</span>
+        <div><h4>Volcanic Ore</h4><p>Found only near the island's dead vent. Smelts into anything sharp.</p></div>
+      </div>
+      <div class="resource">
+        <span class="num">04</span>
+        <div><h4>Palm Fiber</h4><p>Rope, sails, bindings. Renewable if you don't strip the grove bare.</p></div>
+      </div>
+      <div class="resource">
+        <span class="num">05</span>
+        <div><h4>Shellplate</h4><p>Pried from the big mollusks in the shallows. Slow to gather, near-immune to claws.</p></div>
+      </div>
+      <div class="resource">
+        <span class="num">06</span>
+        <div><h4>Reclaimed Scrap</h4><p>Pulled from wrecks the tide drags to your shoal. The only metal that isn't ore.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BUILD -->
+<section class="build-section">
+  <div class="wrap">
+    <div class="build-grid">
+      <div>
+        <div class="eyebrow" style="justify-content:flex-start; margin-bottom:16px;">Build &amp; defend</div>
+        <h2 style="font-size:clamp(2rem,4vw,2.8rem); line-height:1.08;">A base is just a bet you made about tonight.</h2>
+        <p style="margin-top:20px; color:var(--foam-dim); line-height:1.65; max-width:480px;">Terrace the high ground, ring it in palisades, run a rope bridge to the lookout post. Nothing you place is permanent — the tide takes territory back if you let the walls rot.</p>
+        <div class="stat-row">
+          <div class="stat"><b>4</b><span>Players per shoal</span></div>
+          <div class="stat"><b>9</b><span>Tiers of fortification</span></div>
+          <div class="stat"><b>∞</b><span>Ways it still falls</span></div>
+        </div>
+      </div>
+      <div>
+        <svg viewBox="0 0 500 380" style="width:100%; height:auto;">
+          <rect x="0" y="0" width="500" height="380" fill="none"/>
+          <!-- water -->
+          <rect x="0" y="300" width="500" height="80" fill="#123a3e"/>
+          <path d="M0,300 Q60,290 120,300 T240,300 T360,300 T500,300 L500,310 L0,310 Z" fill="#1f5f63" opacity="0.7"/>
+          <!-- island mound -->
+          <path d="M60,300 Q100,180 220,175 Q340,168 420,240 Q460,270 440,300 Z" fill="#3a2a1f"/>
+          <path d="M90,300 Q120,210 220,200 Q320,195 400,250 Q430,270 410,300 Z" fill="#4a3a28"/>
+          <!-- palisade -->
+          <g stroke="#e7c989" stroke-width="4" opacity="0.9">
+            <line x1="150" y1="230" x2="150" y2="185"/>
+            <line x1="168" y1="222" x2="168" y2="177"/>
+            <line x1="186" y1="216" x2="186" y2="172"/>
+            <line x1="204" y1="212" x2="204" y2="168"/>
+            <line x1="222" y1="210" x2="222" y2="166"/>
+            <line x1="240" y1="212" x2="240" y2="168"/>
+            <line x1="258" y1="216" x2="258" y2="172"/>
+            <line x1="276" y1="222" x2="276" y2="178"/>
+          </g>
+          <!-- lookout tower -->
+          <rect x="330" y="120" width="10" height="90" fill="#8a6a4a"/>
+          <rect x="315" y="95" width="40" height="30" fill="#6ef2b0" opacity="0.85"/>
+          <rect x="315" y="95" width="40" height="30" fill="none" stroke="#0a1c1b" stroke-width="2"/>
+          <!-- glow spots -->
+          <circle cx="335" cy="110" r="26" fill="#6ef2b0" opacity="0.15"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ENEMIES -->
+<section class="enemy-section">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">What rises at night</div>
+      <h2>They don't attack the island. They evict you from it.</h2>
+      <p>Threat rises the longer you camp one shoal. Move, fortify, or eventually meet all four.</p>
+    </div>
+
+    <div class="enemy-list">
+      <div class="enemy-row">
+        <span class="glyph">SPECIES 01</span>
+        <div><h4>Tideborn</h4><p>Wash ashore alone at the first dark. Slow, dumb, easy to wall off — until there are twenty of them.</p></div>
+        <div class="threat"><i class="on"></i><i></i><i></i><i></i></div>
+      </div>
+      <div class="enemy-row">
+        <span class="glyph">SPECIES 02</span>
+        <div><h4>Reef Wraiths</h4><p>Camouflage against coral until they're inside your palisade. Post a lookout or lose a wall from the inside.</p></div>
+        <div class="threat"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+      </div>
+      <div class="enemy-row">
+        <span class="glyph">SPECIES 03</span>
+        <div><h4>Brinehulks</h4><p>Slow, armored, drawn to the loudest structure you own. Shellplate walls or a lot of running.</p></div>
+        <div class="threat"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+      </div>
+      <div class="enemy-row">
+        <span class="glyph">SPECIES 04</span>
+        <div><h4>The Undertow</h4><p>Doesn't come ashore. Just pulls the shoreline back a few meters, every visit, until there's no island left to defend.</p></div>
+        <div class="threat"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CO-OP -->
+<section class="coop-section">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Bring a crew</div>
+      <h2>One island. As many hands as you can talk into it.</h2>
+      <p>Split the work — someone dives, someone builds, someone stands the wall — or don't, and find out what an unguarded shoreline costs.</p>
+    </div>
+    <div class="crew-row">
+      <div class="crew-avatar" style="background:#e7c989;">R</div>
+      <div class="crew-avatar" style="background:#ff6b4a;">D</div>
+      <div class="crew-avatar" style="background:#6ef2b0;">K</div>
+      <div class="crew-avatar" style="background:#1f5f63; color:var(--foam);">+1</div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta" id="signup">
+  <div class="eyebrow" style="justify-content:center; margin-bottom:24px;">Coming to PC</div>
+  <h2>The tide's already coming in.<br>Get your reef ready.</h2>
+  <div class="hero-ctas" style="justify-content:center;">
+    <a href="#" class="btn-primary">Wishlist on Steam</a>
+    <a href="#" class="btn-ghost">Join the Discord</a>
+  </div>
+  <div class="platforms">
+    <span>WINDOWS</span><span>·</span><span>STEAM DECK VERIFIED</span><span>·</span><span>CO-OP UP TO 4</span>
+  </div>
+</section>
+
+<footer>
+  <div>ATOLL — a co-op survival game</div>
+  <div>© 2026, built on the reef</div>
+</footer>
+
+<script>
+  // stars
+  const starsEl = document.getElementById('stars');
+  for(let i=0;i<60;i++){
+    const s = document.createElement('div');
+    s.className='star';
+    s.style.left = Math.random()*100+'%';
+    s.style.top = Math.random()*55+'%';
+    s.style.animationDelay = (Math.random()*4)+'s';
+    starsEl.appendChild(s);
+  }
+
+  // tide clock indicator — slow sweep tied to scroll into view, then idle drift
+  const indicator = document.getElementById('tideIndicator');
+  let angle = 0;
+  function animateClock(){
+    angle += 0.15;
+    indicator.style.transform = `rotate(${angle}deg)`;
+    requestAnimationFrame(animateClock);
+  }
+  if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    requestAnimationFrame(animateClock);
+  }
+</script>
+
+</body>
+</html>
