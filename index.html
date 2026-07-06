@@ -230,8 +230,10 @@
   .status-card{background:rgba(243,247,242,0.04); border:1px solid var(--line); border-radius:8px; padding:12px;}
   .status-label{display:block; font-family:'IBM Plex Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; color:var(--foam-dim); margin-bottom:6px; text-transform:uppercase;}
   .player-list{display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 22px;}
-  .player-pill{border:1px solid var(--line); border-radius:999px; padding:8px 12px; font-size:0.9rem; color:var(--foam-dim);}
+  .player-pill{display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:999px; padding:8px 12px; font-size:0.9rem; color:var(--foam-dim);}
   .player-pill.ready{background:rgba(110,242,176,0.12); color:var(--bioglow); border-color:rgba(110,242,176,0.35);}
+  .player-dot{width:10px; height:10px; border-radius:50%; background:var(--coral); box-shadow:0 0 0 2px rgba(255,107,74,0.2);}
+  .player-dot.alt{background:var(--sand);} .player-dot.alt2{background:var(--bioglow);} .player-dot.alt3{background:#8cbaff;}
   .multiplayer-actions{display:flex; gap:12px; flex-wrap:wrap;}
   .multiplayer-actions .btn-ghost{justify-content:center;}
 
@@ -680,7 +682,7 @@
     const DAY_DURATION = 32;
     const NIGHT_DURATION = 20;
 
-    let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime;
+    let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync;
 
     function islandPoint(angle, radiusFactor){
       return { x: cx + Math.cos(angle) * safeR * radiusFactor, y: cy + Math.sin(angle) * safeR * radiusFactor };
@@ -701,7 +703,19 @@
     }
 
     function initGame(){
-      player = { x: cx, y: cy, tx: cx, ty: cy, speed: 130, hp: 100, maxHp: 100, attackCd: 0 };
+      const roomState = loadRoomState(roomCode || readRoomCodeFromUrl());
+      const players = roomState?.players || [];
+      const playerIndex = players.findIndex(entry => entry.name.toLowerCase() === (localPlayerName || '').toLowerCase());
+      const slot = playerIndex >= 0 ? playerIndex : 0;
+      localPlayerColor = ['#ff6b4a', '#e7c989', '#6ef2b0', '#8cbaff'][slot % 4];
+      player = { x: cx, y: cy, tx: cx, ty: cy, speed: 130, hp: 100, maxHp: 100, attackCd: 0, name: localPlayerName || 'Captain', color: localPlayerColor };
+      sharedPlayers = players.map((entry, index)=>({
+        ...entry,
+        name: entry.name || `Player ${index + 1}`,
+        color: entry.color || getPlayerColor(index),
+        x: entry.x ?? cx + (index - (Math.max(1, players.length) - 1) / 2) * 34,
+        y: entry.y ?? cy + 80 + (index % 2) * 10
+      }));
       resources = { wood: 2, coral: 0, ore: 0 };
       nodes = makeNodes();
       walls = [];
@@ -713,8 +727,10 @@
       spawnTimer = 2;
       running = true;
       keys = { up:false, down:false, left:false, right:false };
+      lastSharedSync = 0;
       gameOverScreen.classList.remove('open');
       updateHud();
+      syncLocalPlayerToRoomState(true);
     }
 
     function updateHud(){
@@ -799,6 +815,46 @@
       localStorage.setItem(storageKey, JSON.stringify({ roomCode: roomState.roomCode }));
     }
 
+    function getPlayerColor(index){
+      return ['#ff6b4a', '#e7c989', '#6ef2b0', '#8cbaff'][index % 4];
+    }
+
+    function syncLocalPlayerToRoomState(force = false){
+      if(!roomCode || !localPlayerName || !running) return;
+      const now = performance.now();
+      if(!force && now - lastSharedSync < 180) return;
+      lastSharedSync = now;
+      const roomState = loadRoomState(roomCode) || { roomCode, players: [], crewSize: 2 };
+      const players = (roomState.players || []).map((entry, index)=>({
+        ...entry,
+        name: entry.name || `Player ${index + 1}`,
+        color: entry.color || getPlayerColor(index),
+        x: entry.x ?? cx + (index - (Math.max(1, roomState.players.length) - 1) / 2) * 34,
+        y: entry.y ?? cy + 80 + (index % 2) * 10
+      }));
+      const existingIndex = players.findIndex(entry => entry.name.toLowerCase() === localPlayerName.toLowerCase());
+      const localEntry = {
+        name: localPlayerName,
+        role: existingIndex >= 0 ? players[existingIndex].role || 'Crewmate' : 'Captain',
+        color: player.color || localPlayerColor || getPlayerColor(existingIndex >= 0 ? existingIndex : players.length),
+        x: player.x,
+        y: player.y
+      };
+      if(existingIndex >= 0){
+        players[existingIndex] = localEntry;
+      } else {
+        players.push(localEntry);
+      }
+      const nextRoomState = {
+        ...roomState,
+        roomCode,
+        captain: roomState.captain || localEntry.name,
+        players: players.slice(0, 4)
+      };
+      saveRoomState(nextRoomState);
+      sharedPlayers = nextRoomState.players;
+    }
+
     function renderLobbyState(roomState){
       if(!roomState){
         lobbyStatus.hidden = true;
@@ -817,7 +873,8 @@
       playerList.innerHTML = roomState.players.map((player, index)=>{
         const cls = index === 0 ? 'player-pill ready' : 'player-pill';
         const label = index === 0 ? 'Captain' : 'Crewmate';
-        return `<div class="${cls}">${player.name} • ${label}</div>`;
+        const dotClass = index === 0 ? 'player-dot' : index === 1 ? 'player-dot alt' : index === 2 ? 'player-dot alt2' : 'player-dot alt3';
+        return `<div class="${cls}"><span class="${dotClass}"></span>${player.name} • ${label}</div>`;
       }).join('');
       inviteHint.textContent = `Share this room code: ${roomState.roomCode}. Anyone opening ${getRoomUrl(roomState.roomCode)} can join.`;
     }
@@ -857,6 +914,7 @@
     setInterval(syncLobbyFromStorage, 1000);
 
     function openGame(){
+      roomCode = readRoomCodeFromUrl() || roomCodeInput.value.trim().toUpperCase() || roomCode;
       overlay.classList.add('open');
       lobbyOverlay.classList.remove('open');
       initGame();
@@ -865,8 +923,10 @@
     }
 
     function startGameForCurrentRoom(){
-      const roomCode = (roomCodeInput.value.trim() || readRoomCodeFromUrl() || '').toUpperCase();
-      if(!roomCode){ return; }
+      const roomCodeValue = (roomCodeInput.value.trim() || readRoomCodeFromUrl() || '').toUpperCase();
+      if(!roomCodeValue){ return; }
+      roomCode = roomCodeValue;
+      localPlayerName = localPlayerName || playerNameInput.value.trim() || 'Captain';
       const existing = loadRoomState(roomCode) || { roomCode, players: [], crewSize: 2 };
       const roomState = {
         ...existing,
@@ -890,6 +950,7 @@
     lobbyForm.addEventListener('submit', (e)=>{
       e.preventDefault();
       const captain = playerNameInput.value.trim() || 'Captain';
+      localPlayerName = captain;
       const roomCode = (roomCodeInput.value.trim() || 'ATOLL' + Math.floor(100 + Math.random()*900)).toUpperCase();
       const crewSize = Math.min(4, Number(crewSizeInput.value) || 2);
       const existing = loadRoomState(roomCode) || { roomCode, players: [], crewSize };
@@ -907,6 +968,7 @@
       };
       saveRoomState(roomState);
       roomCodeInput.value = roomCode;
+      roomCode = roomCode;
       window.history.replaceState({}, '', getRoomUrl(roomCode));
       renderLobbyState(roomState);
     });
@@ -944,6 +1006,7 @@
           player.y += ddy / dist * step;
         }
       }
+      syncLocalPlayerToRoomState();
 
       // gather
       nodes.forEach(n=>{
@@ -1085,10 +1148,28 @@
         ctx.fillStyle = '#6ef2b0'; ctx.fill();
       });
 
-      // player
+      // shared players
+      const roomState = loadRoomState(roomCode || readRoomCodeFromUrl());
+      const players = (roomState?.players || sharedPlayers || []).map((entry, index)=>({
+        ...entry,
+        name: entry.name || `Player ${index + 1}`,
+        color: entry.color || getPlayerColor(index),
+        x: entry.x ?? cx + (index - (Math.max(1, (roomState?.players || sharedPlayers || []).length) - 1) / 2) * 34,
+        y: entry.y ?? cy + 80 + (index % 2) * 10
+      }));
+      players.forEach((entry, index)=>{
+        ctx.beginPath();
+        ctx.arc(entry.x, entry.y, 8, 0, Math.PI * 2);
+        ctx.fillStyle = entry.color || getPlayerColor(index);
+        ctx.fill();
+        ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.font = '11px Inter, sans-serif';
+        ctx.fillStyle = '#f3f7f2';
+        ctx.fillText(entry.name, entry.x - 16, entry.y + 24);
+      });
       ctx.beginPath();
       ctx.arc(player.x, player.y, 10, 0, Math.PI * 2);
-      ctx.fillStyle = '#ff6b4a';
+      ctx.fillStyle = player.color || '#ff6b4a';
       ctx.fill();
       ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 2; ctx.stroke();
     }
