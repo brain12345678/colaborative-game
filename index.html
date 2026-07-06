@@ -539,7 +539,7 @@
     <div class="eyebrow">Multiplayer lock-in</div>
     <h2>Lock your crew in before the tide turns.</h2>
     <p>Choose a captain, share a room key, and hold the reef together with up to three crewmates.</p>
-    <p id="inviteHint" style="margin-top:14px; color:var(--foam-dim); font-size:0.9rem; line-height:1.5;">Share the room code or this link with friends. Anyone using the same room can join.</p>
+    <p id="inviteHint" style="margin-top:14px; color:var(--foam-dim); font-size:0.9rem; line-height:1.5;">Share the room code or this link with friends. When the captain launches, everyone in the room joins automatically.</p>
 
     <form class="lobby-form" id="lobbyForm">
       <input id="playerNameInput" type="text" maxlength="18" placeholder="Your name" required>
@@ -803,7 +803,11 @@
       if(!roomState){
         lobbyStatus.hidden = true;
         playerList.innerHTML = '<div class="player-pill ready">Captain • Ready</div><div class="player-pill">Crewmate • Waiting</div>';
-        inviteHint.textContent = 'Share the room code or this link with friends. Anyone using the same room can join.';
+        inviteHint.textContent = 'Share the room code or this link with friends. When the captain launches, everyone in the room joins automatically.';
+        return;
+      }
+      if(roomState.gameStarted && !overlay.classList.contains('open')){
+        openGame();
         return;
       }
       lobbyStatus.hidden = false;
@@ -852,6 +856,21 @@
       lastTime = performance.now();
       requestAnimationFrame(loop);
     }
+
+    function startGameForCurrentRoom(){
+      const roomCode = (roomCodeInput.value.trim() || readRoomCodeFromUrl() || '').toUpperCase();
+      if(!roomCode){ return; }
+      const existing = loadRoomState(roomCode) || { roomCode, players: [], crewSize: 2 };
+      const roomState = {
+        ...existing,
+        roomCode,
+        gameStarted: true,
+        startedBy: existing.captain || 'Captain'
+      };
+      saveRoomState(roomState);
+      window.history.replaceState({}, '', getRoomUrl(roomCode));
+      renderLobbyState(roomState);
+    }
     function closeGame(){
       running = false;
       overlay.classList.remove('open');
@@ -859,7 +878,7 @@
     openBtn.addEventListener('click', (e)=>{ e.preventDefault(); openLobby(); });
     closeBtn.addEventListener('click', closeGame);
     closeLobbyBtn.addEventListener('click', ()=> lobbyOverlay.classList.remove('open'));
-    launchGameBtn.addEventListener('click', openGame);
+    launchGameBtn.addEventListener('click', startGameForCurrentRoom);
     document.getElementById('backToSiteBtn').addEventListener('click', closeGame);
     lobbyForm.addEventListener('submit', (e)=>{
       e.preventDefault();
@@ -875,7 +894,9 @@
         roomCode,
         captain: players[0]?.name || captain,
         crewSize,
-        players: players.slice(0, 4)
+        players: players.slice(0, 4),
+        gameStarted: existing.gameStarted || false,
+        startedBy: existing.startedBy || ''
       };
       saveRoomState(roomState);
       roomCodeInput.value = roomCode;
