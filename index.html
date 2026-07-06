@@ -959,7 +959,7 @@
       });
       document.body.style.overflow = 'hidden';
       const initialRoom = readRoomCodeFromUrl();
-      playerNameInput.value = '';
+      playerNameInput.value = sessionStorage.getItem(playerNameStorageKey) || '';
       roomCodeInput.value = initialRoom || '';
       crewSizeInput.value = '2';
       if(initialRoom){
@@ -1069,6 +1069,9 @@
     });
 
     syncLobbyFromStorage();
+    if(readRoomCodeFromUrl()){
+      requestAnimationFrame(()=> openLobby());
+    }
     document.getElementById('retryBtn').addEventListener('click', ()=>{
       initGame();
       lastTime = performance.now();
@@ -1195,9 +1198,9 @@
       const fov = Math.PI / 2.8;
       const visible = Math.abs(rel) < fov * 1.12 && dist > 6;
       const screenX = W / 2 + (rel / fov) * (W * 0.42);
-      const groundY = H * 0.78;
+      const groundY = H * 0.84;
       const depth = Math.max(0.16, Math.min(1.6, 220 / (dist + 28)));
-      const screenY = groundY - Math.min(88, dist * 0.16) - (depth - 0.16) * 64;
+      const screenY = groundY - Math.min(92, dist * 0.12) - (depth - 0.16) * 86;
       return { visible, x: screenX, y: screenY, depth, dist };
     }
 
@@ -1229,7 +1232,7 @@
       water.addColorStop(1, '#072529');
       ctx.fillStyle = water; ctx.fillRect(0, H * 0.55, W, H * 0.45);
       ctx.strokeStyle = 'rgba(243,247,242,0.16)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, H * 0.55); ctx.lineTo(W, H * 0.55); ctx.stroke();
-      ctx.fillStyle = 'rgba(14,32,34,0.7)'; ctx.fillRect(0, H * 0.8, W, H * 0.2);
+      ctx.fillStyle = 'rgba(14,32,34,0.7)'; ctx.fillRect(0, H * 0.82, W, H * 0.18);
 
       const islandPoints = [];
       for(let i = 0; i <= 24; i++){
