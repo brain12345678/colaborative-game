@@ -230,8 +230,12 @@
   .lobby-status{display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-top:24px;}
   .status-card{background:rgba(243,247,242,0.04); border:1px solid var(--line); border-radius:8px; padding:12px;}
   .status-label{display:block; font-family:'IBM Plex Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; color:var(--foam-dim); margin-bottom:6px; text-transform:uppercase;}
-  .player-list{display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 22px;}
+  .player-list{display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 12px;}
   .player-pill{display:flex; align-items:center; gap:8px; border:1px solid var(--line); border-radius:999px; padding:8px 12px; font-size:0.9rem; color:var(--foam-dim);}
+  .lobby-roster-title{margin-top:16px; font-size:0.78rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--foam-dim);}
+  .room-link-row{display:flex; gap:10px; margin:10px 0 14px;}
+  .room-link-row input{flex:1; border:1px solid var(--line); background:rgba(243,247,242,0.04); color:var(--foam); padding:11px 12px; border-radius:8px; font:inherit;}
+  .room-link-row .btn-ghost{padding:10px 14px; justify-content:center; min-width:104px;}
   .player-pill.ready{background:rgba(110,242,176,0.12); color:var(--bioglow); border-color:rgba(110,242,176,0.35);}
   .player-dot{width:10px; height:10px; border-radius:50%; background:var(--coral); box-shadow:0 0 0 2px rgba(255,107,74,0.2);}
   .player-dot.alt{background:var(--sand);} .player-dot.alt2{background:var(--bioglow);} .player-dot.alt3{background:#8cbaff;}
@@ -570,9 +574,14 @@
       </div>
     </div>
 
+    <div class="lobby-roster-title">People in this room</div>
     <div class="player-list" id="playerList">
       <div class="player-pill ready">Captain • Ready</div>
       <div class="player-pill">Crewmate • Waiting</div>
+    </div>
+    <div class="room-link-row">
+      <input id="roomLinkInput" readonly value="">
+      <button class="btn-ghost" id="copyRoomBtn" type="button">Copy</button>
     </div>
 
     <div class="multiplayer-actions">
@@ -662,6 +671,8 @@
     const launchGameBtn = document.getElementById('launchGameBtn');
     const closeLobbyBtn = document.getElementById('closeLobbyBtn');
     const inviteHint = document.getElementById('inviteHint');
+    const roomLinkInput = document.getElementById('roomLinkInput');
+    const copyRoomBtn = document.getElementById('copyRoomBtn');
     const storageKey = 'atoll-room-state-v1';
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -729,7 +740,7 @@
       const playerIndex = players.findIndex(entry => entry.name.toLowerCase() === (localPlayerName || '').toLowerCase());
       const slot = playerIndex >= 0 ? playerIndex : 0;
       localPlayerColor = ['#ff6b4a', '#e7c989', '#6ef2b0', '#8cbaff'][slot % 4];
-      player = { x: cx, y: cy, tx: cx, ty: cy, speed: 130, hp: 100, maxHp: 100, attackCd: 0, name: localPlayerName || 'Captain', color: localPlayerColor };
+      player = { x: cx, y: cy, tx: cx, ty: cy, angle: -Math.PI / 2, speed: 130, hp: 100, maxHp: 100, attackCd: 0, name: localPlayerName || 'Captain', color: localPlayerColor };
       refreshSharedPlayersFromRoom();
       resources = { wood: 6, coral: 2, ore: 0 };
       nodes = makeNodes();
@@ -800,6 +811,7 @@
       const p = canvasPos(e.clientX, e.clientY);
       const c = clampToIsland(p.x, p.y);
       player.tx = c.x; player.ty = c.y;
+      player.angle = Math.atan2(c.y - player.y, c.x - player.x);
     });
     window.addEventListener('keydown', (e)=>{
       if(!overlay.classList.contains('open')) return;
@@ -905,6 +917,7 @@
       if(!roomState){
         lobbyStatus.hidden = true;
         playerList.innerHTML = '<div class="player-pill ready">Captain • Ready</div><div class="player-pill">Crewmate • Waiting</div>';
+        roomLinkInput.value = '';
         inviteHint.textContent = 'Share the room code or this link with friends. When the captain launches, everyone in the room joins automatically.';
         return;
       }
@@ -916,11 +929,12 @@
       roomCodeDisplay.textContent = roomState.roomCode;
       captainDisplay.textContent = roomState.captain || roomState.players[0]?.name || '—';
       crewDisplay.textContent = `${Math.min(roomState.players.length, 4)} / 4`;
+      roomLinkInput.value = getRoomUrl(roomState.roomCode);
       playerList.innerHTML = roomState.players.map((player, index)=>{
         const cls = index === 0 ? 'player-pill ready' : 'player-pill';
         const label = index === 0 ? 'Captain' : 'Crewmate';
         const dotClass = index === 0 ? 'player-dot' : index === 1 ? 'player-dot alt' : index === 2 ? 'player-dot alt2' : 'player-dot alt3';
-        return `<div class="${cls}"><span class="${dotClass}"></span>${player.name} • ${label}</div>`;
+        return `<div class="${cls}"><span class="${dotClass}"></span>${player.name} • ${label} • in room</div>`;
       }).join('');
       inviteHint.textContent = `Share this room code: ${roomState.roomCode}. Anyone opening ${getRoomUrl(roomState.roomCode)} can join.`;
     }
@@ -996,7 +1010,20 @@
     }
     openBtn.addEventListener('click', (e)=>{ e.preventDefault(); openLobby(); });
     closeBtn.addEventListener('click', closeGame);
-    closeLobbyBtn.addEventListener('click', ()=> lobbyOverlay.classList.remove('open'));
+    closeLobbyBtn.addEventListener('click', ()=> {
+      lobbyOverlay.classList.remove('open');
+      document.body.style.overflow = '';
+    });
+    copyRoomBtn.addEventListener('click', async ()=>{
+      if(!roomLinkInput.value){ return; }
+      try {
+        await navigator.clipboard.writeText(roomLinkInput.value);
+        copyRoomBtn.textContent = 'Copied';
+        setTimeout(()=> copyRoomBtn.textContent = 'Copy', 1200);
+      } catch {
+        copyRoomBtn.textContent = 'Copy';
+      }
+    });
     launchGameBtn.addEventListener('click', startGameForCurrentRoom);
     document.getElementById('backToSiteBtn').addEventListener('click', closeGame);
     lobbyForm.addEventListener('submit', (e)=>{
@@ -1038,18 +1065,16 @@
     }
 
     function update(dt){
-      // movement
-      const keyMoving = keys.up || keys.down || keys.left || keys.right;
-      if(keyMoving){
-        let dx = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-        let dy = (keys.down ? 1 : 0) - (keys.up ? 1 : 0);
-        const len = Math.sqrt(dx*dx + dy*dy) || 1;
-        const nx = player.x + (dx/len) * player.speed * dt;
-        const ny = player.y + (dy/len) * player.speed * dt;
+      if(keys.left) player.angle -= 1.7 * dt;
+      if(keys.right) player.angle += 1.7 * dt;
+      const forward = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
+      if(forward !== 0){
+        const nx = player.x + Math.cos(player.angle) * forward * player.speed * dt;
+        const ny = player.y + Math.sin(player.angle) * forward * player.speed * dt;
         const c = clampToIsland(nx, ny);
         player.x = c.x; player.y = c.y;
         player.tx = player.x; player.ty = player.y;
-      } else {
+      } else if(player.tx !== undefined){
         const ddx = player.tx - player.x, ddy = player.ty - player.y;
         const dist = Math.sqrt(ddx*ddx + ddy*ddy);
         if(dist > 3){
@@ -1139,133 +1164,127 @@
       updateHud();
     }
 
-    function draw3DBox(x, y, w, h, depth, frontColor, topColor, sideColor){
+    function normalizeAngle(a){
+      while(a < -Math.PI) a += Math.PI * 2;
+      while(a > Math.PI) a -= Math.PI * 2;
+      return a;
+    }
+
+    function projectPoint(x, y){
+      const dx = x - player.x;
+      const dy = y - player.y;
+      const dist = Math.hypot(dx, dy) || 0.001;
+      const angle = Math.atan2(dy, dx);
+      const rel = normalizeAngle(angle - player.angle);
+      const fov = Math.PI / 2.6;
+      const visible = Math.abs(rel) < fov * 1.12 && dist > 8;
+      const screenX = W / 2 + (rel / fov) * (W * 0.42);
+      const depth = Math.max(0.2, Math.min(1.6, 220 / (dist + 24)));
+      const screenY = H * 0.75 - (depth - 0.2) * 96;
+      return { visible, x: screenX, y: screenY, depth, dist };
+    }
+
+    function drawProjectedBox(x, y, w, h, depth, frontColor, topColor, sideColor){
+      const scale = Math.max(0.26, depth);
+      const boxW = w * scale;
+      const boxH = h * scale;
+      const boxY = y - boxH * 0.5;
       ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.24)';
-      ctx.fillRect(x + 6, y + 6, w, h);
-      ctx.fillRect(x + 6 + depth, y + 6 - depth, w, h);
-
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + w, y);
-      ctx.lineTo(x + w + depth, y - depth);
-      ctx.lineTo(x + depth, y - depth);
-      ctx.closePath();
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(x + 4, boxY + 4, boxW, boxH);
       ctx.fillStyle = topColor;
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.moveTo(x + w, y);
-      ctx.lineTo(x + w + depth, y - depth);
-      ctx.lineTo(x + w + depth, y + h - depth);
-      ctx.lineTo(x + w, y + h);
-      ctx.closePath();
+      ctx.fillRect(x - boxW * 0.5, boxY - boxH * 0.18, boxW, boxH * 0.18);
       ctx.fillStyle = sideColor;
-      ctx.fill();
-
+      ctx.fillRect(x + boxW * 0.5, boxY, boxW * 0.16, boxH);
       ctx.fillStyle = frontColor;
-      ctx.fillRect(x, y, w, h);
-
-      ctx.strokeStyle = 'rgba(255,255,255,0.24)';
-      ctx.lineWidth = 1.2;
-      ctx.strokeRect(x, y, w, h);
-      ctx.beginPath();
-      ctx.moveTo(x + depth, y - depth);
-      ctx.lineTo(x + w + depth, y - depth);
-      ctx.lineTo(x + w + depth, y + h - depth);
-      ctx.lineTo(x + depth, y + h - depth);
-      ctx.strokeStyle = 'rgba(255,255,255,0.14)';
-      ctx.stroke();
+      ctx.fillRect(x - boxW * 0.5, boxY, boxW, boxH);
       ctx.restore();
     }
 
     function draw(){
       ctx.clearRect(0, 0, W, H);
-      // water
-      const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, '#123a3e'); g.addColorStop(1, '#1f5f63');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      const sky = ctx.createLinearGradient(0, 0, 0, H * 0.55);
+      sky.addColorStop(0, '#0c2433');
+      sky.addColorStop(1, '#1f5f63');
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H * 0.55);
+      const water = ctx.createLinearGradient(0, H * 0.55, 0, H);
+      water.addColorStop(0, '#1c5960');
+      water.addColorStop(1, '#072529');
+      ctx.fillStyle = water; ctx.fillRect(0, H * 0.55, W, H * 0.45);
+      ctx.strokeStyle = 'rgba(243,247,242,0.16)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, H * 0.55); ctx.lineTo(W, H * 0.55); ctx.stroke();
 
-      // island
-      ctx.beginPath();
+      const islandPoints = [];
       for(let i = 0; i <= 24; i++){
         const a = (i / 24) * Math.PI * 2;
         const r = islandR + 18 * Math.sin(a * 2.3) + 10 * Math.cos(a * 1.6);
-        const px = cx + Math.cos(a) * r, py = cy + Math.sin(a) * r;
-        if(i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        const px = cx + Math.cos(a) * r;
+        const py = cy + Math.sin(a) * r;
+        const p = projectPoint(px, py);
+        if(p.visible) islandPoints.push(p);
       }
-      ctx.closePath();
-      const ig = ctx.createRadialGradient(cx, cy, 20, cx, cy, islandR);
-      ig.addColorStop(0, '#4a3a28'); ig.addColorStop(1, '#2c2318');
-      ctx.fillStyle = ig; ctx.fill();
-      ctx.strokeStyle = 'rgba(231,201,137,0.25)'; ctx.lineWidth = 2; ctx.stroke();
+      if(islandPoints.length){
+        ctx.beginPath();
+        islandPoints.forEach((p, i)=>{ if(i===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(40,30,20,0.95)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(231,201,137,0.25)'; ctx.lineWidth = 2; ctx.stroke();
+      }
 
-      // nodes
       nodes.forEach(n=>{
         if(n.amount <= 0) return;
+        const p = projectPoint(n.x, n.y);
+        if(!p.visible) return;
         const colors = { wood:'#a9754a', coral:'#e7c989', ore:'#9aa5a6' };
-        const scale = 0.5 + 0.5 * (n.amount / n.max);
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, 12 * scale, 0, Math.PI * 2);
-        ctx.fillStyle = colors[n.type];
-        ctx.fill();
+        const s = 4 + (n.amount / n.max) * 3;
+        ctx.beginPath(); ctx.arc(p.x, p.y, s * p.depth, 0, Math.PI * 2); ctx.fillStyle = colors[n.type]; ctx.fill();
       });
 
-      // craftables
       walls.forEach(w=>{
+        const p = projectPoint(w.x, w.y);
+        if(!p.visible) return;
         ctx.globalAlpha = 0.45 + 0.55 * (w.hp / w.max);
         if(w.kind === 'gate'){
-          draw3DBox(w.x - 12, w.y - 10, 8, 20, 4, w.color, '#8a5a3c', '#5f4330');
-          draw3DBox(w.x + 4, w.y - 10, 8, 20, 4, w.color, '#8a5a3c', '#5f4330');
-          draw3DBox(w.x - 10, w.y - 18, 20, 6, 3, '#6d4d35', '#8c6848', '#4d3428');
+          drawProjectedBox(p.x, p.y, 8, 20, p.depth, w.color, '#8a5a3c', '#5f4330');
+          drawProjectedBox(p.x + 8 * p.depth, p.y, 8, 20, p.depth, w.color, '#8a5a3c', '#5f4330');
+          drawProjectedBox(p.x + 4 * p.depth, p.y - 12 * p.depth, 20, 6, p.depth, '#6d4d35', '#8c6848', '#4d3428');
         } else if(w.kind === 'tower'){
-          draw3DBox(w.x - 10, w.y - 8, 20, 16, 5, w.color, '#8a9297', '#61676d');
-          draw3DBox(w.x - 6, w.y - 24, 12, 12, 4, '#7b8288', '#a0a4a8', '#5e6369');
+          drawProjectedBox(p.x, p.y, 20, 16, p.depth, w.color, '#8a9297', '#61676d');
+          drawProjectedBox(p.x, p.y - 16 * p.depth, 12, 12, p.depth, '#7b8288', '#a0a4a8', '#5e6369');
         } else if(w.kind === 'beacon'){
-          draw3DBox(w.x - 5, w.y - 18, 10, 28, 3, w.color, '#8b5d3b', '#5d3e2a');
-          draw3DBox(w.x - 12, w.y - 22, 24, 6, 3, '#7a4f2f', '#a66d47', '#543121');
-          draw3DBox(w.x - 8, w.y - 28, 16, 8, 3, '#6ef2b0', '#9ff9c8', '#3aa96e');
+          drawProjectedBox(p.x, p.y, 10, 28, p.depth, w.color, '#8b5d3b', '#5d3e2a');
+          drawProjectedBox(p.x, p.y - 16 * p.depth, 24, 6, p.depth, '#7a4f2f', '#a66d47', '#543121');
+          drawProjectedBox(p.x, p.y - 28 * p.depth, 16, 8, p.depth, '#6ef2b0', '#9ff9c8', '#3aa96e');
         } else {
-          draw3DBox(w.x - 12, w.y - 9, 24, 18, 5, w.color, '#a67549', '#6e4627');
+          drawProjectedBox(p.x, p.y, 24, 18, p.depth, w.color, '#a67549', '#6e4627');
         }
         ctx.globalAlpha = 1;
       });
 
-      // night tint
       if(phase === 'night'){
-        ctx.fillStyle = 'rgba(6,16,18,0.28)';
-        ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = 'rgba(6,16,18,0.28)'; ctx.fillRect(0, 0, W, H);
       }
 
-      // enemies
       enemies.forEach(en=>{
-        ctx.beginPath();
-        ctx.arc(en.x, en.y, 9, 0, Math.PI * 2);
-        const eg = ctx.createRadialGradient(en.x, en.y, 0, en.x, en.y, 14);
-        eg.addColorStop(0, 'rgba(110,242,176,0.9)');
-        eg.addColorStop(1, 'rgba(110,242,176,0)');
-        ctx.fillStyle = eg; ctx.fill();
-        ctx.beginPath(); ctx.arc(en.x, en.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = '#6ef2b0'; ctx.fill();
+        const p = projectPoint(en.x, en.y);
+        if(!p.visible) return;
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 16 * p.depth);
+        g.addColorStop(0, 'rgba(110,242,176,0.95)'); g.addColorStop(1, 'rgba(110,242,176,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 10 * p.depth, 0, Math.PI * 2); ctx.fill();
       });
 
-      // shared players
       const players = refreshSharedPlayersFromRoom();
       players.forEach((entry, index)=>{
-        ctx.beginPath();
-        ctx.arc(entry.x, entry.y, 8, 0, Math.PI * 2);
-        ctx.fillStyle = entry.color || getPlayerColor(index);
-        ctx.fill();
-        ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 1.5; ctx.stroke();
-        ctx.font = '11px Inter, sans-serif';
-        ctx.fillStyle = '#f3f7f2';
-        ctx.fillText(entry.name, entry.x - 16, entry.y + 24);
+        const p = projectPoint(entry.x, entry.y);
+        if(!p.visible) return;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 6 * p.depth, 0, Math.PI * 2); ctx.fillStyle = entry.color || getPlayerColor(index); ctx.fill();
+        ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 1.4; ctx.stroke();
+        ctx.font = `${10 * p.depth}px Inter, sans-serif`; ctx.fillStyle = '#f3f7f2'; ctx.fillText(entry.name, p.x - 16 * p.depth, p.y + 18 * p.depth);
       });
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 10, 0, Math.PI * 2);
-      ctx.fillStyle = player.color || '#ff6b4a';
-      ctx.fill();
+      const localP = projectPoint(player.x, player.y);
+      ctx.beginPath(); ctx.arc(localP.x, localP.y, 7 * localP.depth, 0, Math.PI * 2); ctx.fillStyle = player.color || '#ff6b4a'; ctx.fill();
       ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.strokeStyle = 'rgba(243,247,242,0.7)'; ctx.beginPath(); ctx.moveTo(W / 2 - 4, H / 2); ctx.lineTo(W / 2 + 4, H / 2); ctx.moveTo(W / 2, H / 2 - 4); ctx.lineTo(W / 2, H / 2 + 4); ctx.stroke();
     }
 
     function loop(now){
