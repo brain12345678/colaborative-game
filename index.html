@@ -682,10 +682,10 @@
     const DAY_DURATION = 32;
     const NIGHT_DURATION = 20;
     const craftRecipes = [
-      { key:'wall', name:'Drift Wall', wood:5, coral:2, hp:40, color:'#7a5739' },
-      { key:'gate', name:'Rust Gate', ore:4, wood:3, hp:58, color:'#6e574b' },
-      { key:'tower', name:'Scrap Tower', ore:6, coral:3, hp:72, color:'#5e6368' },
-      { key:'beacon', name:'Tide Beacon', wood:4, ore:4, coral:1, hp:64, color:'#7b4d33' }
+      { key:'wall', name:'Drift Wall', wood:3, coral:1, hp:40, color:'#7a5739' },
+      { key:'gate', name:'Rust Gate', ore:2, wood:2, hp:58, color:'#6e574b' },
+      { key:'tower', name:'Scrap Tower', ore:4, coral:2, hp:72, color:'#5e6368' },
+      { key:'beacon', name:'Tide Beacon', wood:2, ore:2, coral:1, hp:64, color:'#7b4d33' }
     ];
 
     let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync, buildIndex;
@@ -730,7 +730,7 @@
       localPlayerColor = ['#ff6b4a', '#e7c989', '#6ef2b0', '#8cbaff'][slot % 4];
       player = { x: cx, y: cy, tx: cx, ty: cy, speed: 130, hp: 100, maxHp: 100, attackCd: 0, name: localPlayerName || 'Captain', color: localPlayerColor };
       refreshSharedPlayersFromRoom();
-      resources = { wood: 2, coral: 0, ore: 0 };
+      resources = { wood: 6, coral: 2, ore: 0 };
       nodes = makeNodes();
       walls = [];
       enemies = [];
@@ -741,7 +741,7 @@
       spawnTimer = 2;
       running = true;
       keys = { up:false, down:false, left:false, right:false };
-      buildIndex = 0;
+      buildIndex = findAffordableRecipe(0);
       lastSharedSync = 0;
       gameOverScreen.classList.remove('open');
       updateHud();
@@ -750,6 +750,14 @@
 
     function canAfford(recipe){
       return (resources.wood >= (recipe.wood || 0)) && (resources.coral >= (recipe.coral || 0)) && (resources.ore >= (recipe.ore || 0));
+    }
+
+    function findAffordableRecipe(startIndex = 0){
+      for(let offset = 0; offset < craftRecipes.length; offset++){
+        const idx = (startIndex + offset) % craftRecipes.length;
+        if(canAfford(craftRecipes[idx])) return idx;
+      }
+      return startIndex % craftRecipes.length;
     }
 
     function updateHud(){
@@ -811,9 +819,10 @@
         resources.coral -= recipe.coral || 0;
         resources.ore -= recipe.ore || 0;
         walls.push({ x: player.x, y: player.y, hp: recipe.hp, max: recipe.hp, kind: recipe.key, color: recipe.color });
+        buildIndex = findAffordableRecipe((buildIndex + 1) % craftRecipes.length);
         updateHud();
       } else {
-        buildIndex = (buildIndex + 1) % craftRecipes.length;
+        buildIndex = findAffordableRecipe(buildIndex + 1);
         updateHud();
       }
     });
