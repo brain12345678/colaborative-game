@@ -208,6 +208,33 @@
   }
 
   /* ---------- GAME OVERLAY ---------- */
+  .multiplayer-overlay{
+    position:fixed; inset:0; z-index:410; display:none; align-items:center; justify-content:center;
+    padding:24px; background:rgba(7,22,21,0.92); backdrop-filter:blur(10px);
+  }
+  .multiplayer-overlay.open{display:flex;}
+  .multiplayer-panel{
+    width:min(560px, 100%); background:linear-gradient(180deg, rgba(18,58,62,0.95), rgba(10,28,27,0.95));
+    border:1px solid var(--line); border-radius:12px; padding:32px; box-shadow:0 20px 60px rgba(0,0,0,0.35);
+  }
+  .multiplayer-panel h2{font-size:clamp(1.8rem, 3vw, 2.4rem); margin-top:10px; line-height:1.08;}
+  .multiplayer-panel p{margin-top:12px; color:var(--foam-dim); line-height:1.6;}
+  .lobby-form{display:grid; gap:12px; margin-top:24px;}
+  .lobby-form input, .lobby-form select{
+    width:100%; border:1px solid var(--line); background:rgba(243,247,242,0.04); color:var(--foam);
+    padding:13px 14px; border-radius:8px; font:inherit;
+  }
+  .lobby-form input::placeholder{color:rgba(243,247,242,0.45);}
+  .lobby-form .btn-primary{justify-self:flex-start; margin-top:6px;}
+  .lobby-status{display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-top:24px;}
+  .status-card{background:rgba(243,247,242,0.04); border:1px solid var(--line); border-radius:8px; padding:12px;}
+  .status-label{display:block; font-family:'IBM Plex Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; color:var(--foam-dim); margin-bottom:6px; text-transform:uppercase;}
+  .player-list{display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 22px;}
+  .player-pill{border:1px solid var(--line); border-radius:999px; padding:8px 12px; font-size:0.9rem; color:var(--foam-dim);}
+  .player-pill.ready{background:rgba(110,242,176,0.12); color:var(--bioglow); border-color:rgba(110,242,176,0.35);}
+  .multiplayer-actions{display:flex; gap:12px; flex-wrap:wrap;}
+  .multiplayer-actions .btn-ghost{justify-content:center;}
+
   .game-overlay{
     position:fixed; inset:0; z-index:400; display:none; flex-direction:column;
     background:#071615; padding:16px; gap:10px;
@@ -281,7 +308,7 @@
   <p class="tagline">No boat. No crew. No one to split the work with. Just a scrap of reef, whatever you can pull from the water yourself, and everything that swims closer once the sun goes down.</p>
   <div class="hero-ctas">
     <a href="#signup" class="btn-primary">Wishlist on Steam</a>
-    <a href="#loop" class="btn-ghost" id="openGameBtn">▸ Watch the tide roll in</a>
+    <a href="#lobby" class="btn-ghost" id="openGameBtn">▸ Lock in for multiplayer</a>
   </div>
 
   <div class="island-scene">
@@ -498,14 +525,58 @@
     <a href="#" class="btn-ghost">Join the Discord</a>
   </div>
   <div class="platforms">
-    <span>WINDOWS</span><span>·</span><span>STEAM DECK VERIFIED</span><span>·</span><span>SINGLEPLAYER</span>
+    <span>WINDOWS</span><span>·</span><span>STEAM DECK VERIFIED</span><span>·</span><span>MULTIPLAYER READY</span>
   </div>
 </section>
 
 <footer>
-  <div>ATOLL — a solo survival game</div>
+  <div>ATOLL — a shared survival game</div>
   <div>© 2026, built on the reef</div>
 </footer>
+
+<div class="multiplayer-overlay" id="multiplayerOverlay">
+  <div class="multiplayer-panel">
+    <div class="eyebrow">Multiplayer lock-in</div>
+    <h2>Lock your crew in before the tide turns.</h2>
+    <p>Choose a captain, share a room key, and hold the reef together with up to three crewmates.</p>
+
+    <form class="lobby-form" id="lobbyForm">
+      <input id="playerNameInput" type="text" maxlength="18" placeholder="Captain name" required>
+      <input id="roomCodeInput" type="text" maxlength="6" placeholder="Room code (optional)" autocomplete="off">
+      <select id="crewSizeInput">
+        <option value="2">2 players</option>
+        <option value="3">3 players</option>
+        <option value="4">4 players</option>
+      </select>
+      <button type="submit" class="btn-primary">Lock in crew</button>
+    </form>
+
+    <div class="lobby-status" id="lobbyStatus" hidden>
+      <div class="status-card">
+        <span class="status-label">Room</span>
+        <strong id="roomCodeDisplay">—</strong>
+      </div>
+      <div class="status-card">
+        <span class="status-label">Captain</span>
+        <strong id="captainDisplay">—</strong>
+      </div>
+      <div class="status-card">
+        <span class="status-label">Crew</span>
+        <strong id="crewDisplay">—</strong>
+      </div>
+    </div>
+
+    <div class="player-list" id="playerList">
+      <div class="player-pill ready">Captain • Ready</div>
+      <div class="player-pill">Crewmate • Waiting</div>
+    </div>
+
+    <div class="multiplayer-actions">
+      <button class="btn-primary" id="launchGameBtn" type="button">Launch shared reef</button>
+      <button class="btn-ghost" id="closeLobbyBtn" type="button">Back to the reef</button>
+    </div>
+  </div>
+</div>
 
 <div class="game-overlay" id="gameOverlay">
   <div class="game-hud">
@@ -572,8 +643,20 @@
   // ================= PLAYABLE GAME =================
   (function(){
     const overlay = document.getElementById('gameOverlay');
+    const lobbyOverlay = document.getElementById('multiplayerOverlay');
     const openBtn = document.getElementById('openGameBtn');
     const closeBtn = document.getElementById('gameCloseBtn');
+    const lobbyForm = document.getElementById('lobbyForm');
+    const playerNameInput = document.getElementById('playerNameInput');
+    const roomCodeInput = document.getElementById('roomCodeInput');
+    const crewSizeInput = document.getElementById('crewSizeInput');
+    const lobbyStatus = document.getElementById('lobbyStatus');
+    const roomCodeDisplay = document.getElementById('roomCodeDisplay');
+    const captainDisplay = document.getElementById('captainDisplay');
+    const crewDisplay = document.getElementById('crewDisplay');
+    const playerList = document.getElementById('playerList');
+    const launchGameBtn = document.getElementById('launchGameBtn');
+    const closeLobbyBtn = document.getElementById('closeLobbyBtn');
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
@@ -688,8 +771,18 @@
       }
     });
 
+    function openLobby(){
+      lobbyOverlay.classList.add('open');
+      lobbyStatus.hidden = true;
+      playerNameInput.value = '';
+      roomCodeInput.value = '';
+      crewSizeInput.value = '2';
+      playerList.innerHTML = '<div class="player-pill ready">Captain • Ready</div><div class="player-pill">Crewmate • Waiting</div>';
+    }
+
     function openGame(){
       overlay.classList.add('open');
+      lobbyOverlay.classList.remove('open');
       initGame();
       lastTime = performance.now();
       requestAnimationFrame(loop);
@@ -698,9 +791,28 @@
       running = false;
       overlay.classList.remove('open');
     }
-    openBtn.addEventListener('click', (e)=>{ e.preventDefault(); openGame(); });
+    openBtn.addEventListener('click', (e)=>{ e.preventDefault(); openLobby(); });
     closeBtn.addEventListener('click', closeGame);
+    closeLobbyBtn.addEventListener('click', ()=> lobbyOverlay.classList.remove('open'));
+    launchGameBtn.addEventListener('click', openGame);
     document.getElementById('backToSiteBtn').addEventListener('click', closeGame);
+    lobbyForm.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const captain = playerNameInput.value.trim() || 'Captain';
+      const roomCode = (roomCodeInput.value.trim() || 'ATOLL' + Math.floor(100 + Math.random()*900)).toUpperCase();
+      const crewSize = Number(crewSizeInput.value);
+      roomCodeDisplay.textContent = roomCode;
+      captainDisplay.textContent = captain;
+      crewDisplay.textContent = `${Math.min(crewSize, 4)} / 4`;
+      const pills = [];
+      pills.push(`<div class="player-pill ready">${captain} • Captain</div>`);
+      for(let i = 1; i < Math.min(crewSize, 4); i++){
+        pills.push(`<div class="player-pill">Crewmate ${i} • Waiting</div>`);
+      }
+      playerList.innerHTML = pills.join('');
+      lobbyStatus.hidden = false;
+      roomCodeInput.value = roomCode;
+    });
     document.getElementById('retryBtn').addEventListener('click', ()=>{
       initGame();
       lastTime = performance.now();
