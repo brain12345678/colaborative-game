@@ -277,7 +277,7 @@
   .build-btn{
     background:rgba(231,201,137,0.12); border:1px solid var(--sand); color:var(--sand);
     padding:10px 18px; border-radius:2px; font-size:0.85rem; font-family:'Inter',sans-serif;
-    cursor:pointer; transition:background .2s, opacity .2s;
+    cursor:pointer; transition:background .2s, opacity .2s; min-width:220px;
   }
   .build-btn:hover{background:rgba(231,201,137,0.22);}
   .build-btn.disabled{opacity:0.35; cursor:not-allowed; pointer-events:none;}
@@ -681,8 +681,14 @@
 
     const DAY_DURATION = 32;
     const NIGHT_DURATION = 20;
+    const craftRecipes = [
+      { key:'wall', name:'Drift Wall', wood:5, coral:2, hp:40, color:'#7a5739' },
+      { key:'gate', name:'Rust Gate', ore:4, wood:3, hp:58, color:'#6e574b' },
+      { key:'tower', name:'Scrap Tower', ore:6, coral:3, hp:72, color:'#5e6368' },
+      { key:'beacon', name:'Tide Beacon', wood:4, ore:4, coral:1, hp:64, color:'#7b4d33' }
+    ];
 
-    let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync;
+    let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync, buildIndex;
 
     function islandPoint(angle, radiusFactor){
       return { x: cx + Math.cos(angle) * safeR * radiusFactor, y: cy + Math.sin(angle) * safeR * radiusFactor };
@@ -735,10 +741,15 @@
       spawnTimer = 2;
       running = true;
       keys = { up:false, down:false, left:false, right:false };
+      buildIndex = 0;
       lastSharedSync = 0;
       gameOverScreen.classList.remove('open');
       updateHud();
       syncLocalPlayerToRoomState(true);
+    }
+
+    function canAfford(recipe){
+      return (resources.wood >= (recipe.wood || 0)) && (resources.coral >= (recipe.coral || 0)) && (resources.ore >= (recipe.ore || 0));
     }
 
     function updateHud(){
@@ -750,8 +761,11 @@
       phaseBarFill.style.width = Math.max(0, (1 - phaseTimer / duration) * 100) + '%';
       phaseBarFill.classList.toggle('night', phase === 'night');
       phaseLabel.textContent = (phase === 'day' ? 'DAY ' : 'NIGHT ') + dayNumber;
-      const canAfford = resources.wood >= 5 && resources.coral >= 2;
-      buildBtn.classList.toggle('disabled', !canAfford);
+      const recipe = craftRecipes[buildIndex % craftRecipes.length];
+      buildBtn.textContent = canAfford(recipe)
+        ? `Craft ${recipe.name}`
+        : `Next: ${recipe.name}`;
+      buildBtn.classList.toggle('disabled', false);
     }
 
     function clampToIsland(x, y){
@@ -791,9 +805,15 @@
     });
 
     buildBtn.addEventListener('click', ()=>{
-      if(resources.wood >= 5 && resources.coral >= 2){
-        resources.wood -= 5; resources.coral -= 2;
-        walls.push({ x: player.x, y: player.y, hp: 40, max: 40 });
+      const recipe = craftRecipes[buildIndex % craftRecipes.length];
+      if(canAfford(recipe)){
+        resources.wood -= recipe.wood || 0;
+        resources.coral -= recipe.coral || 0;
+        resources.ore -= recipe.ore || 0;
+        walls.push({ x: player.x, y: player.y, hp: recipe.hp, max: recipe.hp, kind: recipe.key, color: recipe.color });
+        updateHud();
+      } else {
+        buildIndex = (buildIndex + 1) % craftRecipes.length;
         updateHud();
       }
     });
@@ -1133,14 +1153,35 @@
         ctx.fill();
       });
 
-      // walls
+      // craftables
       walls.forEach(w=>{
-        ctx.globalAlpha = 0.4 + 0.6 * (w.hp / w.max);
-        ctx.fillStyle = '#8a6a4a';
-        ctx.fillRect(w.x - 9, w.y - 9, 18, 18);
-        ctx.strokeStyle = '#e7c989';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(w.x - 9, w.y - 9, 18, 18);
+        ctx.globalAlpha = 0.45 + 0.55 * (w.hp / w.max);
+        if(w.kind === 'gate'){
+          ctx.fillStyle = w.color;
+          ctx.fillRect(w.x - 12, w.y - 10, 8, 20);
+          ctx.fillRect(w.x + 4, w.y - 10, 8, 20);
+          ctx.fillRect(w.x - 10, w.y - 18, 20, 6);
+          ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 1.2; ctx.strokeRect(w.x - 12, w.y - 10, 8, 20); ctx.strokeRect(w.x + 4, w.y - 10, 8, 20);
+        } else if(w.kind === 'tower'){
+          ctx.fillStyle = w.color;
+          ctx.fillRect(w.x - 10, w.y - 8, 20, 16);
+          ctx.fillRect(w.x - 14, w.y - 12, 28, 6);
+          ctx.fillRect(w.x - 6, w.y - 24, 12, 12);
+          ctx.strokeStyle = '#e7c989'; ctx.lineWidth = 1.2; ctx.strokeRect(w.x - 10, w.y - 8, 20, 16);
+        } else if(w.kind === 'beacon'){
+          ctx.fillStyle = w.color;
+          ctx.fillRect(w.x - 5, w.y - 18, 10, 28);
+          ctx.fillRect(w.x - 12, w.y - 22, 24, 6);
+          ctx.fillRect(w.x - 8, w.y - 28, 16, 8);
+          ctx.fillStyle = '#6ef2b0'; ctx.fillRect(w.x - 6, w.y - 30, 12, 4);
+          ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 1.1; ctx.strokeRect(w.x - 5, w.y - 18, 10, 28);
+        } else {
+          ctx.fillStyle = w.color;
+          ctx.fillRect(w.x - 12, w.y - 9, 24, 18);
+          ctx.fillStyle = '#a67549';
+          ctx.fillRect(w.x - 12, w.y - 9, 24, 6);
+          ctx.strokeStyle = '#e7c989'; ctx.lineWidth = 1.4; ctx.strokeRect(w.x - 12, w.y - 9, 24, 18);
+        }
         ctx.globalAlpha = 1;
       });
 
