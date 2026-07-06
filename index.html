@@ -701,7 +701,7 @@
       { key:'beacon', name:'Tide Beacon', wood:2, ore:2, coral:1, hp:64, color:'#7b4d33' }
     ];
 
-    let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync, buildIndex;
+    let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync, buildIndex, loopFrame;
     localPlayerName = sessionStorage.getItem(playerNameStorageKey) || '';
 
     function islandPoint(angle, radiusFactor){
@@ -992,12 +992,22 @@
     setInterval(syncLobbyFromStorage, 1000);
 
     function openGame(){
-      roomCode = readRoomCodeFromUrl() || roomCodeInput.value.trim().toUpperCase() || roomCode;
+      const targetRoomCode = readRoomCodeFromUrl() || roomCodeInput.value.trim().toUpperCase() || roomCode;
+      if(!targetRoomCode) return;
+      roomCode = targetRoomCode;
+      if(overlay.classList.contains('open') && running){
+        return;
+      }
+      if(loopFrame){
+        cancelAnimationFrame(loopFrame);
+        loopFrame = 0;
+      }
       overlay.classList.add('open');
       lobbyOverlay.classList.remove('open');
+      document.body.style.overflow = '';
       initGame();
       lastTime = performance.now();
-      requestAnimationFrame(loop);
+      loopFrame = requestAnimationFrame(loop);
     }
 
     function startGameForCurrentRoom(){
@@ -1020,6 +1030,10 @@
     }
     function closeGame(){
       running = false;
+      if(loopFrame){
+        cancelAnimationFrame(loopFrame);
+        loopFrame = 0;
+      }
       overlay.classList.remove('open');
       document.body.style.overflow = '';
     }
@@ -1314,7 +1328,7 @@
       lastTime = now;
       update(dt);
       draw();
-      requestAnimationFrame(loop);
+      loopFrame = requestAnimationFrame(loop);
     }
   })();
 </script>
