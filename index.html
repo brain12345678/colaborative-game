@@ -674,6 +674,7 @@
     const roomLinkInput = document.getElementById('roomLinkInput');
     const copyRoomBtn = document.getElementById('copyRoomBtn');
     const storageKey = 'atoll-room-state-v1';
+    const playerNameStorageKey = 'atoll-player-name-v1';
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
@@ -701,6 +702,7 @@
     ];
 
     let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync, buildIndex;
+    localPlayerName = sessionStorage.getItem(playerNameStorageKey) || '';
 
     function islandPoint(angle, radiusFactor){
       return { x: cx + Math.cos(angle) * safeR * radiusFactor, y: cy + Math.sin(angle) * safeR * radiusFactor };
@@ -847,6 +849,17 @@
       return (params.get('room') || '').trim().toUpperCase();
     }
 
+    function saveLocalPlayerName(name){
+      if(!name) return;
+      localPlayerName = name;
+      sessionStorage.setItem(playerNameStorageKey, name);
+    }
+
+    function navigateToRoom(roomCode){
+      const nextUrl = getRoomUrl(roomCode);
+      window.location.href = nextUrl;
+    }
+
     function getRoomUrl(roomCode){
       const url = new URL(window.location.href);
       url.searchParams.set('room', roomCode);
@@ -991,7 +1004,7 @@
       const roomCodeValue = (roomCodeInput.value.trim() || readRoomCodeFromUrl() || '').toUpperCase();
       if(!roomCodeValue){ return; }
       roomCode = roomCodeValue;
-      localPlayerName = localPlayerName || playerNameInput.value.trim() || 'Captain';
+      saveLocalPlayerName(localPlayerName || playerNameInput.value.trim() || 'Captain');
       const existing = loadRoomState(roomCode) || { roomCode, players: [], crewSize: 2 };
       const roomState = {
         ...existing,
@@ -1000,8 +1013,10 @@
         startedBy: existing.captain || 'Captain'
       };
       saveRoomState(roomState);
+      saveLocalPlayerName(localPlayerName || playerNameInput.value.trim() || 'Captain');
       window.history.replaceState({}, '', getRoomUrl(roomCode));
       renderLobbyState(roomState);
+      navigateToRoom(roomCode);
     }
     function closeGame(){
       running = false;
@@ -1029,7 +1044,7 @@
     lobbyForm.addEventListener('submit', (e)=>{
       e.preventDefault();
       const captain = playerNameInput.value.trim() || 'Captain';
-      localPlayerName = captain;
+      saveLocalPlayerName(captain);
       const roomCode = (roomCodeInput.value.trim() || 'ATOLL' + Math.floor(100 + Math.random()*900)).toUpperCase();
       const crewSize = Math.min(4, Number(crewSizeInput.value) || 2);
       const existing = loadRoomState(roomCode) || { roomCode, players: [], crewSize };
@@ -1050,6 +1065,7 @@
       roomCode = roomCode;
       window.history.replaceState({}, '', getRoomUrl(roomCode));
       renderLobbyState(roomState);
+      navigateToRoom(roomCode);
     });
 
     syncLobbyFromStorage();
@@ -1176,11 +1192,12 @@
       const dist = Math.hypot(dx, dy) || 0.001;
       const angle = Math.atan2(dy, dx);
       const rel = normalizeAngle(angle - player.angle);
-      const fov = Math.PI / 2.6;
-      const visible = Math.abs(rel) < fov * 1.12 && dist > 8;
+      const fov = Math.PI / 2.8;
+      const visible = Math.abs(rel) < fov * 1.12 && dist > 6;
       const screenX = W / 2 + (rel / fov) * (W * 0.42);
-      const depth = Math.max(0.2, Math.min(1.6, 220 / (dist + 24)));
-      const screenY = H * 0.75 - (depth - 0.2) * 96;
+      const groundY = H * 0.78;
+      const depth = Math.max(0.16, Math.min(1.6, 220 / (dist + 28)));
+      const screenY = groundY - Math.min(88, dist * 0.16) - (depth - 0.16) * 64;
       return { visible, x: screenX, y: screenY, depth, dist };
     }
 
@@ -1212,6 +1229,7 @@
       water.addColorStop(1, '#072529');
       ctx.fillStyle = water; ctx.fillRect(0, H * 0.55, W, H * 0.45);
       ctx.strokeStyle = 'rgba(243,247,242,0.16)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, H * 0.55); ctx.lineTo(W, H * 0.55); ctx.stroke();
+      ctx.fillStyle = 'rgba(14,32,34,0.7)'; ctx.fillRect(0, H * 0.8, W, H * 0.2);
 
       const islandPoints = [];
       for(let i = 0; i <= 24; i++){
