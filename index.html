@@ -678,9 +678,13 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
-    const cx = W / 2, cy = H / 2 + 6;
-    const islandR = 190;
-    const safeR = islandR - 46;
+    const mapW = 1400;
+    const mapH = 900;
+    const cx = mapW / 2;
+    const cy = mapH / 2;
+    const islandR = 260;
+    const safeR = islandR - 62;
+    const worldBounds = { minX: 90, maxX: mapW - 90, minY: 90, maxY: mapH - 90 };
 
     const resWoodEl = document.getElementById('resWood');
     const resCoralEl = document.getElementById('resCoral');
@@ -701,8 +705,7 @@
       { key:'beacon', name:'Tide Beacon', wood:2, ore:2, coral:1, hp:64, color:'#7b4d33' }
     ];
 
-    let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync, buildIndex, loopFrame, camera;
-    const cameraHeight = 12;
+    let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync, buildIndex, loopFrame, camera, weapons;
     localPlayerName = sessionStorage.getItem(playerNameStorageKey) || '';
 
     function islandPoint(angle, radiusFactor){
@@ -721,6 +724,15 @@
         const p = islandPoint(d.angle, d.rf);
         return { type: d.type, x: p.x, y: p.y, amount: d.max, max: d.max, gatherCd: 0, respawnT: 0 };
       });
+    }
+
+    function makeWeapons(){
+      return [
+        { kind:'spear', name:'Harpoon Spear', damage: 18, range: 44, x: 280, y: 220, color:'#6fd3ff', picked:false },
+        { kind:'shotgun', name:'Rust Shotgun', damage: 26, range: 58, x: 1040, y: 240, color:'#b9734b', picked:false },
+        { kind:'blade', name:'Scrap Blade', damage: 20, range: 36, x: 300, y: 720, color:'#c3d0d8', picked:false },
+        { kind:'rifle', name:'Tide Rifle', damage: 24, range: 72, x: 1120, y: 760, color:'#6bf2b0', picked:false }
+      ];
     }
 
     function refreshSharedPlayersFromRoom(){
@@ -743,11 +755,12 @@
       const playerIndex = players.findIndex(entry => entry.name.toLowerCase() === (localPlayerName || '').toLowerCase());
       const slot = playerIndex >= 0 ? playerIndex : 0;
       localPlayerColor = ['#ff6b4a', '#e7c989', '#6ef2b0', '#8cbaff'][slot % 4];
-      player = { x: cx, y: cy, tx: cx, ty: cy, angle: -Math.PI / 2, speed: 130, hp: 100, maxHp: 100, attackCd: 0, name: localPlayerName || 'Captain', color: localPlayerColor };
-      camera = { x: player.x, y: player.y, angle: player.angle, height: cameraHeight };
+      player = { x: cx, y: cy, tx: cx, ty: cy, angle: -Math.PI / 2, speed: 130, hp: 100, maxHp: 100, attackCd: 0, name: localPlayerName || 'Captain', color: localPlayerColor, weapon: null };
+      camera = { x: player.x, y: player.y };
       refreshSharedPlayersFromRoom();
       resources = { wood: 6, coral: 2, ore: 0 };
       nodes = makeNodes();
+      weapons = makeWeapons();
       walls = [
         { x: cx - 45, y: cy + 70, hp: 40, max: 40, kind: 'wall', color: '#7a5739' }
       ];
@@ -794,13 +807,11 @@
       buildBtn.classList.toggle('disabled', false);
     }
 
-    function clampToIsland(x, y){
-      const dx = x - cx, dy = y - cy;
-      const d = Math.sqrt(dx*dx + dy*dy);
-      if(d > safeR){
-        return { x: cx + dx / d * safeR, y: cy + dy / d * safeR };
-      }
-      return { x, y };
+    function clampToWorld(x, y){
+      return {
+        x: Math.max(worldBounds.minX, Math.min(worldBounds.maxX, x)),
+        y: Math.max(worldBounds.minY, Math.min(worldBounds.maxY, y))
+      };
     }
 
     // ---- input ----
@@ -811,9 +822,16 @@
         y: (clientY - rect.top) / rect.height * H
       };
     }
+    function screenToWorld(screenX, screenY){
+      return {
+        x: screenX + camera.x - W / 2,
+        y: screenY + camera.y - H / 2
+      };
+    }
     canvas.addEventListener('pointerdown', (e)=>{
       const p = canvasPos(e.clientX, e.clientY);
-      const c = clampToIsland(p.x, p.y);
+      const world = screenToWorld(p.x, p.y);
+      const c = clampToWorld(world.x, world.y);
       player.tx = c.x; player.ty = c.y;
       player.angle = Math.atan2(c.y - player.y, c.x - player.x);
     });
@@ -1110,14 +1128,13 @@
     function update(dt){
       if(keys.left) player.angle -= 1.7 * dt;
       if(keys.right) player.angle += 1.7 * dt;
-      camera.x += (player.x - camera.x) * Math.min(1, dt * 3.8);
-      camera.y += (player.y - camera.y) * Math.min(1, dt * 3.8);
-      camera.angle += normalizeAngle(player.angle - camera.angle) * Math.min(1, dt * 3.2);
+      camera.x += (player.x - camera.x) * Math.min(1, dt * 4.2);
+      camera.y += (player.y - camera.y) * Math.min(1, dt * 4.2);
       const forward = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
       if(forward !== 0){
         const nx = player.x + Math.cos(player.angle) * forward * player.speed * dt;
         const ny = player.y + Math.sin(player.angle) * forward * player.speed * dt;
-        const c = clampToIsland(nx, ny);
+        const c = clampToWorld(nx, ny);
         player.x = c.x; player.y = c.y;
         player.tx = player.x; player.ty = player.y;
       } else if(player.tx !== undefined){
@@ -1130,6 +1147,13 @@
         }
       }
       syncLocalPlayerToRoomState();
+
+      weapons.forEach(weapon=>{
+        if(!weapon.picked && Math.hypot(player.x - weapon.x, player.y - weapon.y) < 26){
+          weapon.picked = true;
+          player.weapon = { kind: weapon.kind, name: weapon.name, damage: weapon.damage, range: weapon.range, color: weapon.color };
+        }
+      });
 
       // gather
       nodes.forEach(n=>{
@@ -1190,8 +1214,10 @@
             player.hp -= en.dmg * dt;
           }
         }
-        if(d < 34){
-          en.hp -= 16 * dt; // player auto-attacks nearby enemies
+        const attackRange = player.weapon ? player.weapon.range : 34;
+        if(d < attackRange){
+          const attackDamage = player.weapon ? player.weapon.damage : 16;
+          en.hp -= attackDamage * dt;
         }
       });
       enemies = enemies.filter(en=>{
@@ -1217,18 +1243,10 @@
     }
 
     function projectPoint(x, y){
-      const dx = x - camera.x;
-      const dy = y - camera.y;
-      const dist = Math.hypot(dx, dy) || 0.001;
-      const angle = Math.atan2(dy, dx);
-      const rel = normalizeAngle(angle - camera.angle);
-      const fov = Math.PI / 3.2;
-      const visible = Math.abs(rel) < fov * 1.08 && dist > 6;
-      const screenX = W / 2 + (rel / fov) * (W * 0.4);
-      const groundY = H * 0.86;
-      const depth = Math.max(0.2, Math.min(1.45, 220 / (dist + 28)));
-      const screenY = groundY - Math.min(96, dist * 0.06) - (depth - 0.2) * 22;
-      return { visible, x: screenX, y: screenY, depth, dist };
+      const screenX = W / 2 + (x - camera.x);
+      const screenY = H / 2 + (y - camera.y);
+      const visible = screenX >= -40 && screenX <= W + 40 && screenY >= -40 && screenY <= H + 40;
+      return { visible, x: screenX, y: screenY, depth: 1, dist: Math.hypot(x - camera.x, y - camera.y) };
     }
 
     function drawProjectedBox(x, y, w, h, depth, frontColor, topColor, sideColor){
@@ -1250,89 +1268,91 @@
 
     function draw(){
       ctx.clearRect(0, 0, W, H);
-      const sky = ctx.createLinearGradient(0, 0, 0, H * 0.55);
-      sky.addColorStop(0, '#0c2433');
-      sky.addColorStop(1, '#1f5f63');
-      ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H * 0.55);
-      const water = ctx.createLinearGradient(0, H * 0.55, 0, H);
-      water.addColorStop(0, '#1c5960');
-      water.addColorStop(1, '#072529');
-      ctx.fillStyle = water; ctx.fillRect(0, H * 0.55, W, H * 0.45);
-      ctx.strokeStyle = 'rgba(243,247,242,0.16)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, H * 0.55); ctx.lineTo(W, H * 0.55); ctx.stroke();
-      ctx.fillStyle = 'rgba(14,32,34,0.7)'; ctx.fillRect(0, H * 0.84, W, H * 0.16);
+      ctx.fillStyle = '#071824'; ctx.fillRect(0, 0, W, H);
 
-      const islandPoints = [];
-      for(let i = 0; i <= 24; i++){
-        const a = (i / 24) * Math.PI * 2;
-        const r = islandR + 18 * Math.sin(a * 2.3) + 10 * Math.cos(a * 1.6);
-        const px = cx + Math.cos(a) * r;
-        const py = cy + Math.sin(a) * r;
-        const p = projectPoint(px, py);
-        if(p.visible) islandPoints.push(p);
-      }
-      if(islandPoints.length){
-        ctx.beginPath();
-        islandPoints.forEach((p, i)=>{ if(i===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
-        ctx.closePath();
-        ctx.fillStyle = 'rgba(40,30,20,0.95)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(231,201,137,0.25)'; ctx.lineWidth = 2; ctx.stroke();
-      }
+      ctx.save();
+      ctx.translate(W / 2 - camera.x, H / 2 - camera.y);
+
+      ctx.fillStyle = '#0f3240';
+      ctx.fillRect(0, 0, mapW, mapH);
+      ctx.strokeStyle = 'rgba(220,240,255,0.06)';
+      ctx.lineWidth = 1;
+      for(let x = 0; x <= mapW; x += 80){ ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, mapH); ctx.stroke(); }
+      for(let y = 0; y <= mapH; y += 80){ ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(mapW, y); ctx.stroke(); }
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, islandR, 0, Math.PI * 2);
+      ctx.fillStyle = '#355a34';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx, cy, islandR - 34, 0, Math.PI * 2);
+      ctx.fillStyle = '#4d6f3e';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, islandR - 90, 0, Math.PI * 2);
+      ctx.fillStyle = '#6e8a4f';
+      ctx.fill();
 
       nodes.forEach(n=>{
         if(n.amount <= 0) return;
-        const p = projectPoint(n.x, n.y);
-        if(!p.visible) return;
         const colors = { wood:'#a9754a', coral:'#e7c989', ore:'#9aa5a6' };
-        const s = 4 + (n.amount / n.max) * 3;
-        ctx.beginPath(); ctx.arc(p.x, p.y, s * p.depth, 0, Math.PI * 2); ctx.fillStyle = colors[n.type]; ctx.fill();
+        const s = 5 + (n.amount / n.max) * 5;
+        ctx.beginPath(); ctx.arc(n.x, n.y, s, 0, Math.PI * 2); ctx.fillStyle = colors[n.type]; ctx.fill();
+      });
+
+      weapons.forEach(weapon=>{
+        if(weapon.picked) return;
+        ctx.beginPath();
+        ctx.arc(weapon.x, weapon.y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = weapon.color;
+        ctx.fill();
+        ctx.strokeStyle = '#f3f7f2';
+        ctx.lineWidth = 2;
+        ctx.stroke();
       });
 
       walls.forEach(w=>{
-        const p = projectPoint(w.x, w.y);
-        if(!p.visible) return;
         ctx.globalAlpha = 0.45 + 0.55 * (w.hp / w.max);
-        if(w.kind === 'gate'){
-          drawProjectedBox(p.x, p.y, 8, 20, p.depth, w.color, '#8a5a3c', '#5f4330');
-          drawProjectedBox(p.x + 8 * p.depth, p.y, 8, 20, p.depth, w.color, '#8a5a3c', '#5f4330');
-          drawProjectedBox(p.x + 4 * p.depth, p.y - 12 * p.depth, 20, 6, p.depth, '#6d4d35', '#8c6848', '#4d3428');
-        } else if(w.kind === 'tower'){
-          drawProjectedBox(p.x, p.y, 20, 16, p.depth, w.color, '#8a9297', '#61676d');
-          drawProjectedBox(p.x, p.y - 16 * p.depth, 12, 12, p.depth, '#7b8288', '#a0a4a8', '#5e6369');
-        } else if(w.kind === 'beacon'){
-          drawProjectedBox(p.x, p.y, 10, 28, p.depth, w.color, '#8b5d3b', '#5d3e2a');
-          drawProjectedBox(p.x, p.y - 16 * p.depth, 24, 6, p.depth, '#7a4f2f', '#a66d47', '#543121');
-          drawProjectedBox(p.x, p.y - 28 * p.depth, 16, 8, p.depth, '#6ef2b0', '#9ff9c8', '#3aa96e');
-        } else {
-          drawProjectedBox(p.x, p.y, 24, 18, p.depth, w.color, '#a67549', '#6e4627');
-        }
+        ctx.fillStyle = w.color;
+        ctx.fillRect(w.x - 12, w.y - 10, 24, 20);
         ctx.globalAlpha = 1;
       });
 
-      if(phase === 'night'){
-        ctx.fillStyle = 'rgba(6,16,18,0.28)'; ctx.fillRect(0, 0, W, H);
-      }
-
       enemies.forEach(en=>{
-        const p = projectPoint(en.x, en.y);
-        if(!p.visible) return;
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 16 * p.depth);
-        g.addColorStop(0, 'rgba(110,242,176,0.95)'); g.addColorStop(1, 'rgba(110,242,176,0)');
-        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 10 * p.depth, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(en.x, en.y, 10, 0, Math.PI * 2); ctx.fillStyle = '#6ef2b0'; ctx.fill();
+        ctx.strokeStyle = '#0b1c20'; ctx.lineWidth = 2; ctx.stroke();
       });
 
       const players = refreshSharedPlayersFromRoom();
       players.forEach((entry, index)=>{
-        const p = projectPoint(entry.x, entry.y);
-        if(!p.visible) return;
-        ctx.beginPath(); ctx.arc(p.x, p.y, 6 * p.depth, 0, Math.PI * 2); ctx.fillStyle = entry.color || getPlayerColor(index); ctx.fill();
-        ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 1.4; ctx.stroke();
-        ctx.font = `${10 * p.depth}px Inter, sans-serif`; ctx.fillStyle = '#f3f7f2'; ctx.fillText(entry.name, p.x - 16 * p.depth, p.y + 18 * p.depth);
+        ctx.beginPath(); ctx.arc(entry.x, entry.y, 7, 0, Math.PI * 2); ctx.fillStyle = entry.color || getPlayerColor(index); ctx.fill();
+        ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = '#f3f7f2'; ctx.font = '12px Inter, sans-serif'; ctx.fillText(entry.name, entry.x - 18, entry.y - 12);
       });
-      const localP = { visible: true, x: W / 2, y: H * 0.84 - 8, depth: 1 };
-      ctx.beginPath(); ctx.arc(localP.x, localP.y, 7 * localP.depth, 0, Math.PI * 2); ctx.fillStyle = player.color || '#ff6b4a'; ctx.fill();
-      ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.strokeStyle = 'rgba(243,247,242,0.7)'; ctx.beginPath(); ctx.moveTo(W / 2 - 4, H * 0.5 + 6); ctx.lineTo(W / 2 + 4, H * 0.5 + 6); ctx.moveTo(W / 2, H * 0.5 + 2); ctx.lineTo(W / 2, H * 0.5 + 10); ctx.stroke();
+
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      ctx.rotate(player.angle);
+      ctx.fillStyle = player.color || '#ff6b4a';
+      ctx.beginPath();
+      ctx.moveTo(0, -12);
+      ctx.lineTo(10, 10);
+      ctx.lineTo(0, 6);
+      ctx.lineTo(-10, 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      ctx.restore();
+
+      ctx.fillStyle = 'rgba(7, 18, 24, 0.7)';
+      ctx.fillRect(10, 10, 220, 72);
+      ctx.fillStyle = '#f3f7f2';
+      ctx.font = '12px Inter, sans-serif';
+      ctx.fillText(`Map: ${Math.round(mapW)}×${Math.round(mapH)}`, 22, 32);
+      ctx.fillText(player.weapon ? `Weapon: ${player.weapon.name}` : 'Weapon: none', 22, 52);
+      ctx.fillText(`Controls: click / WASD`, 22, 72);
     }
 
     function loop(now){
