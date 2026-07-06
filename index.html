@@ -702,6 +702,7 @@
     ];
 
     let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync, buildIndex, loopFrame, camera;
+    const cameraHeight = 18;
     localPlayerName = sessionStorage.getItem(playerNameStorageKey) || '';
 
     function islandPoint(angle, radiusFactor){
@@ -743,7 +744,7 @@
       const slot = playerIndex >= 0 ? playerIndex : 0;
       localPlayerColor = ['#ff6b4a', '#e7c989', '#6ef2b0', '#8cbaff'][slot % 4];
       player = { x: cx, y: cy, tx: cx, ty: cy, angle: -Math.PI / 2, speed: 130, hp: 100, maxHp: 100, attackCd: 0, name: localPlayerName || 'Captain', color: localPlayerColor };
-      camera = { x: player.x, y: player.y, angle: player.angle };
+      camera = { x: player.x, y: player.y, angle: player.angle, height: cameraHeight };
       refreshSharedPlayersFromRoom();
       resources = { wood: 6, coral: 2, ore: 0 };
       nodes = makeNodes();
@@ -855,6 +856,14 @@
       localPlayerName = name;
       sessionStorage.setItem(playerNameStorageKey, name);
     }
+
+    function clearTransientSessionData(){
+      sessionStorage.removeItem(playerNameStorageKey);
+      sessionStorage.removeItem('atoll-last-room-v1');
+    }
+
+    window.addEventListener('pagehide', clearTransientSessionData);
+    window.addEventListener('beforeunload', clearTransientSessionData);
 
     function navigateToRoom(roomCode){
       const nextUrl = getRoomUrl(roomCode);
@@ -1101,9 +1110,9 @@
     function update(dt){
       if(keys.left) player.angle -= 1.7 * dt;
       if(keys.right) player.angle += 1.7 * dt;
-      camera.x += (player.x - camera.x) * Math.min(1, dt * 6);
-      camera.y += (player.y - camera.y) * Math.min(1, dt * 6);
-      camera.angle += normalizeAngle(player.angle - camera.angle) * Math.min(1, dt * 6);
+      camera.x += (player.x - camera.x) * Math.min(1, dt * 3.8);
+      camera.y += (player.y - camera.y) * Math.min(1, dt * 3.8);
+      camera.angle += normalizeAngle(player.angle - camera.angle) * Math.min(1, dt * 3.2);
       const forward = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
       if(forward !== 0){
         const nx = player.x + Math.cos(player.angle) * forward * player.speed * dt;
@@ -1213,12 +1222,12 @@
       const dist = Math.hypot(dx, dy) || 0.001;
       const angle = Math.atan2(dy, dx);
       const rel = normalizeAngle(angle - camera.angle);
-      const fov = Math.PI / 2.8;
-      const visible = Math.abs(rel) < fov * 1.12 && dist > 6;
-      const screenX = W / 2 + (rel / fov) * (W * 0.42);
-      const groundY = H * 0.78;
-      const depth = Math.max(0.16, Math.min(1.6, 220 / (dist + 28)));
-      const screenY = groundY - Math.min(72, dist * 0.09) - (depth - 0.16) * 68;
+      const fov = Math.PI / 3.2;
+      const visible = Math.abs(rel) < fov * 1.08 && dist > 6;
+      const screenX = W / 2 + (rel / fov) * (W * 0.4);
+      const groundY = H * 0.74;
+      const depth = Math.max(0.18, Math.min(1.4, 220 / (dist + 28)));
+      const screenY = groundY - Math.min(46, dist * 0.05) - (depth - 0.18) * 34 - camera.height * 0.45;
       return { visible, x: screenX, y: screenY, depth, dist };
     }
 
