@@ -1216,9 +1216,9 @@
       const fov = Math.PI / 2.8;
       const visible = Math.abs(rel) < fov * 1.12 && dist > 6;
       const screenX = W / 2 + (rel / fov) * (W * 0.42);
-      const groundY = H * 0.84;
+      const groundY = H * 0.78;
       const depth = Math.max(0.16, Math.min(1.6, 220 / (dist + 28)));
-      const screenY = groundY - Math.min(92, dist * 0.12) - (depth - 0.16) * 86;
+      const screenY = groundY - Math.min(72, dist * 0.09) - (depth - 0.16) * 68;
       return { visible, x: screenX, y: screenY, depth, dist };
     }
 
@@ -1250,7 +1250,7 @@
       water.addColorStop(1, '#072529');
       ctx.fillStyle = water; ctx.fillRect(0, H * 0.55, W, H * 0.45);
       ctx.strokeStyle = 'rgba(243,247,242,0.16)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, H * 0.55); ctx.lineTo(W, H * 0.55); ctx.stroke();
-      ctx.fillStyle = 'rgba(14,32,34,0.7)'; ctx.fillRect(0, H * 0.82, W, H * 0.18);
+      ctx.fillStyle = 'rgba(14,32,34,0.7)'; ctx.fillRect(0, H * 0.78, W, H * 0.22);
 
       const islandPoints = [];
       for(let i = 0; i <= 24; i++){
@@ -1323,7 +1323,7 @@
       const localP = { visible: true, x: W / 2, y: H / 2 + 6, depth: 1 };
       ctx.beginPath(); ctx.arc(localP.x, localP.y, 7 * localP.depth, 0, Math.PI * 2); ctx.fillStyle = player.color || '#ff6b4a'; ctx.fill();
       ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 2; ctx.stroke();
-      ctx.strokeStyle = 'rgba(243,247,242,0.7)'; ctx.beginPath(); ctx.moveTo(W / 2 - 4, H / 2); ctx.lineTo(W / 2 + 4, H / 2); ctx.moveTo(W / 2, H / 2 - 4); ctx.lineTo(W / 2, H / 2 + 4); ctx.stroke();
+      ctx.strokeStyle = 'rgba(243,247,242,0.7)'; ctx.beginPath(); ctx.moveTo(W / 2 - 4, H * 0.5 + 6); ctx.lineTo(W / 2 + 4, H * 0.5 + 6); ctx.moveTo(W / 2, H * 0.5 + 2); ctx.lineTo(W / 2, H * 0.5 + 10); ctx.stroke();
     }
 
     function loop(now){
