@@ -796,6 +796,7 @@
 
     function saveRoomState(roomState){
       localStorage.setItem(storageKey + ':' + roomState.roomCode, JSON.stringify(roomState));
+      localStorage.setItem(storageKey, JSON.stringify({ roomCode: roomState.roomCode }));
     }
 
     function renderLobbyState(roomState){
@@ -830,6 +831,19 @@
         renderLobbyState(null);
       }
     }
+
+    function syncLobbyFromStorage(){
+      const roomCode = readRoomCodeFromUrl();
+      if(roomCode){
+        renderLobbyState(loadRoomState(roomCode));
+      }
+    }
+
+    window.addEventListener('storage', (event)=>{
+      if(event.key && event.key.startsWith(storageKey + ':')){
+        syncLobbyFromStorage();
+      }
+    });
 
     function openGame(){
       overlay.classList.add('open');
@@ -868,6 +882,8 @@
       window.history.replaceState({}, '', getRoomUrl(roomCode));
       renderLobbyState(roomState);
     });
+
+    syncLobbyFromStorage();
     document.getElementById('retryBtn').addEventListener('click', ()=>{
       initGame();
       lastTime = performance.now();
