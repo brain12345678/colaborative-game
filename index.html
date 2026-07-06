@@ -311,7 +311,7 @@
   <p class="tagline">No boat. No crew. No one to split the work with. Just a scrap of reef, whatever you can pull from the water yourself, and everything that swims closer once the sun goes down.</p>
   <div class="hero-ctas">
     <a href="#signup" class="btn-primary">Wishlist on Steam</a>
-    <button type="button" class="btn-ghost" id="openGameBtn">▸ Lock in for multiplayer</button>
+    <button type="button" class="btn-ghost" id="openGameBtn" onclick="window.openMultiplayerLobby && window.openMultiplayerLobby()">▸ Lock in for multiplayer</button>
   </div>
 
   <div class="island-scene">
@@ -733,7 +733,9 @@
       refreshSharedPlayersFromRoom();
       resources = { wood: 6, coral: 2, ore: 0 };
       nodes = makeNodes();
-      walls = [];
+      walls = [
+        { x: cx - 45, y: cy + 70, hp: 40, max: 40, kind: 'wall', color: '#7a5739' }
+      ];
       enemies = [];
       phase = 'day';
       phaseTimer = DAY_DURATION;
@@ -924,7 +926,11 @@
     }
 
     function openLobby(){
-      lobbyOverlay.classList.add('open');
+      lobbyOverlay.classList.remove('open');
+      requestAnimationFrame(()=>{
+        lobbyOverlay.classList.add('open');
+      });
+      document.body.style.overflow = 'hidden';
       const initialRoom = readRoomCodeFromUrl();
       playerNameInput.value = '';
       roomCodeInput.value = initialRoom || '';
@@ -936,6 +942,7 @@
         renderLobbyState(null);
       }
     }
+    window.openMultiplayerLobby = openLobby;
 
     function syncLobbyFromStorage(){
       const roomCode = readRoomCodeFromUrl();
@@ -985,6 +992,7 @@
     function closeGame(){
       running = false;
       overlay.classList.remove('open');
+      document.body.style.overflow = '';
     }
     openBtn.addEventListener('click', (e)=>{ e.preventDefault(); openLobby(); });
     closeBtn.addEventListener('click', closeGame);
