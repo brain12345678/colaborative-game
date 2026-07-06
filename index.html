@@ -701,7 +701,7 @@
       { key:'beacon', name:'Tide Beacon', wood:2, ore:2, coral:1, hp:64, color:'#7b4d33' }
     ];
 
-    let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync, buildIndex, loopFrame;
+    let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync, buildIndex, loopFrame, camera;
     localPlayerName = sessionStorage.getItem(playerNameStorageKey) || '';
 
     function islandPoint(angle, radiusFactor){
@@ -743,6 +743,7 @@
       const slot = playerIndex >= 0 ? playerIndex : 0;
       localPlayerColor = ['#ff6b4a', '#e7c989', '#6ef2b0', '#8cbaff'][slot % 4];
       player = { x: cx, y: cy, tx: cx, ty: cy, angle: -Math.PI / 2, speed: 130, hp: 100, maxHp: 100, attackCd: 0, name: localPlayerName || 'Captain', color: localPlayerColor };
+      camera = { x: player.x, y: player.y, angle: player.angle };
       refreshSharedPlayersFromRoom();
       resources = { wood: 6, coral: 2, ore: 0 };
       nodes = makeNodes();
@@ -1100,6 +1101,9 @@
     function update(dt){
       if(keys.left) player.angle -= 1.7 * dt;
       if(keys.right) player.angle += 1.7 * dt;
+      camera.x += (player.x - camera.x) * Math.min(1, dt * 6);
+      camera.y += (player.y - camera.y) * Math.min(1, dt * 6);
+      camera.angle += normalizeAngle(player.angle - camera.angle) * Math.min(1, dt * 6);
       const forward = (keys.up ? 1 : 0) - (keys.down ? 1 : 0);
       if(forward !== 0){
         const nx = player.x + Math.cos(player.angle) * forward * player.speed * dt;
@@ -1204,11 +1208,11 @@
     }
 
     function projectPoint(x, y){
-      const dx = x - player.x;
-      const dy = y - player.y;
+      const dx = x - camera.x;
+      const dy = y - camera.y;
       const dist = Math.hypot(dx, dy) || 0.001;
       const angle = Math.atan2(dy, dx);
-      const rel = normalizeAngle(angle - player.angle);
+      const rel = normalizeAngle(angle - camera.angle);
       const fov = Math.PI / 2.8;
       const visible = Math.abs(rel) < fov * 1.12 && dist > 6;
       const screenX = W / 2 + (rel / fov) * (W * 0.42);
@@ -1316,7 +1320,7 @@
         ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 1.4; ctx.stroke();
         ctx.font = `${10 * p.depth}px Inter, sans-serif`; ctx.fillStyle = '#f3f7f2'; ctx.fillText(entry.name, p.x - 16 * p.depth, p.y + 18 * p.depth);
       });
-      const localP = projectPoint(player.x, player.y);
+      const localP = { visible: true, x: W / 2, y: H / 2 + 6, depth: 1 };
       ctx.beginPath(); ctx.arc(localP.x, localP.y, 7 * localP.depth, 0, Math.PI * 2); ctx.fillStyle = player.color || '#ff6b4a'; ctx.fill();
       ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 2; ctx.stroke();
       ctx.strokeStyle = 'rgba(243,247,242,0.7)'; ctx.beginPath(); ctx.moveTo(W / 2 - 4, H / 2); ctx.lineTo(W / 2 + 4, H / 2); ctx.moveTo(W / 2, H / 2 - 4); ctx.lineTo(W / 2, H / 2 + 4); ctx.stroke();
