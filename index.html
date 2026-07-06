@@ -212,6 +212,48 @@
   @media (prefers-reduced-motion: reduce){
     .water, .star, .tide-indicator{animation:none !important;}
   }
+
+  /* ---------- LOBBY MODAL ---------- */
+  .lobby-overlay{
+    position:fixed; inset:0; background:rgba(10,28,27,0.82); backdrop-filter:blur(6px);
+    z-index:300; display:none; align-items:center; justify-content:center; padding:24px;
+  }
+  .lobby-overlay.open{display:flex;}
+  .lobby-modal{
+    background:#0f2b29; border:1px solid var(--line); border-radius:4px; padding:40px;
+    max-width:440px; width:100%; position:relative; max-height:86vh; overflow-y:auto;
+  }
+  @media(max-width:480px){.lobby-modal{padding:28px 22px;}}
+  .lobby-close{
+    position:absolute; top:14px; right:14px; background:none; border:none; color:var(--foam-dim);
+    font-size:1.6rem; cursor:pointer; line-height:1; padding:6px;
+  }
+  .lobby-close:hover{color:var(--foam);}
+  .lobby-modal h3{font-size:1.5rem; margin-top:8px; line-height:1.2;}
+  .lobby-tabs{display:flex; margin:24px 0 20px; border-bottom:1px solid var(--line);}
+  .lobby-tab{
+    background:none; border:none; color:var(--foam-dim); padding:10px 4px; font-size:0.9rem;
+    cursor:pointer; border-bottom:2px solid transparent; margin-right:24px; font-family:'Inter',sans-serif;
+  }
+  .lobby-tab.active{color:var(--foam); border-bottom-color:var(--coral);}
+  .lobby-pane label{display:block; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--foam-dim); margin-bottom:8px;}
+  .lobby-pane input{
+    width:100%; background:var(--abyss); border:1px solid var(--line); color:var(--foam);
+    padding:12px 14px; border-radius:2px; font-family:'Inter',sans-serif; font-size:0.95rem;
+  }
+  .lobby-pane input:focus{outline:none; border-color:var(--bioglow);}
+  .lobby-error{color:var(--coral); font-size:0.85rem; margin-top:10px; min-height:1em;}
+  .room-code{font-family:'IBM Plex Mono',monospace; font-size:2.2rem; letter-spacing:0.3em; color:var(--sand); margin-top:6px;}
+  .crew-list{margin-top:26px; display:flex; flex-direction:column; gap:2px; max-height:180px; overflow-y:auto;}
+  .crew-item{display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line); font-size:0.95rem;}
+  .crew-item .dot{width:8px; height:8px; border-radius:50%; background:var(--bioglow); flex-shrink:0;}
+  .crew-item.you{color:var(--sand);}
+  .lobby-hint{color:var(--foam-dim); font-size:0.88rem; margin-top:18px; line-height:1.5;}
+  .lobby-leave{
+    background:none; border:none; color:var(--foam-dim); font-size:0.85rem; margin-top:14px;
+    cursor:pointer; text-decoration:underline; display:block; width:100%; text-align:center; padding:6px;
+  }
+  .lobby-leave:hover{color:var(--coral);}
 </style>
 </head>
 <body>
@@ -231,7 +273,7 @@
   <p class="tagline">No boat. No hull to patch. Just a scrap of reef, whatever you can pull from the water, and everything that swims closer once the sun goes down.</p>
   <div class="hero-ctas">
     <a href="#signup" class="btn-primary">Wishlist on Steam</a>
-    <a href="#loop" class="btn-ghost">▸ Watch the tide roll in</a>
+    <a href="#loop" class="btn-ghost" id="openLobbyBtn">▸ Watch the tide roll in</a>
   </div>
 
   <div class="island-scene">
@@ -446,6 +488,57 @@
   <div>© 2026, built on the reef</div>
 </footer>
 
+<div class="lobby-overlay" id="lobbyOverlay">
+  <div class="lobby-modal">
+    <button class="lobby-close" id="lobbyClose" aria-label="Close">&times;</button>
+
+    <div id="lobbyHome">
+      <div class="eyebrow" style="justify-content:flex-start; margin-bottom:0;">Find your crew</div>
+      <h3>Raise a shoal, or join one already rising.</h3>
+
+      <div class="lobby-tabs">
+        <button class="lobby-tab active" data-tab="host">Host a shoal</button>
+        <button class="lobby-tab" data-tab="join">Join a shoal</button>
+      </div>
+
+      <div class="lobby-pane" id="paneHost">
+        <label for="hostName">Your name</label>
+        <input id="hostName" maxlength="16" placeholder="Captain Kai">
+        <button class="btn-primary" id="createBtn" style="width:100%; margin-top:18px;">Create shoal</button>
+        <p class="lobby-error" id="createError"></p>
+      </div>
+
+      <div class="lobby-pane" id="paneJoin" style="display:none;">
+        <label for="joinName">Your name</label>
+        <input id="joinName" maxlength="16" placeholder="Captain Kai">
+        <label for="joinCode" style="margin-top:14px;">Shoal code</label>
+        <input id="joinCode" maxlength="5" placeholder="X7QJP" style="text-transform:uppercase;">
+        <button class="btn-primary" id="joinBtn" style="width:100%; margin-top:18px;">Join shoal</button>
+        <p class="lobby-error" id="joinError"></p>
+      </div>
+    </div>
+
+    <div id="lobbyRoom" style="display:none;">
+      <div class="eyebrow" style="justify-content:flex-start; margin-bottom:0;">Shoal code</div>
+      <div class="room-code" id="roomCodeDisplay">-----</div>
+      <button class="btn-ghost" id="copyCodeBtn" style="margin-top:14px; padding:10px 20px; font-size:0.85rem;">Copy code</button>
+
+      <div class="crew-list" id="crewList"></div>
+
+      <p class="lobby-hint" id="hostHint">Waiting for more hands on deck…</p>
+      <button class="btn-primary" id="startBtn" style="width:100%; margin-top:20px;">Start the voyage</button>
+      <button class="lobby-leave" id="leaveBtn">Leave shoal</button>
+    </div>
+
+    <div id="lobbyLaunch" style="display:none; text-align:center;">
+      <div class="eyebrow" style="justify-content:center;">Casting off</div>
+      <h3>The tide's taking your crew out.</h3>
+      <p style="color:var(--foam-dim); margin-top:12px; line-height:1.6;">ATOLL itself isn't live yet — so consider this shoal reserved. Every name in this crew gets an invite the moment the gates open.</p>
+      <button class="lobby-leave" id="closeLaunchBtn">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // stars
   const starsEl = document.getElementById('stars');
@@ -469,6 +562,171 @@
   if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
     requestAnimationFrame(animateClock);
   }
+
+  // ---------- LOBBY (create / join a game with friends) ----------
+  (function(){
+    const overlay = document.getElementById('lobbyOverlay');
+    const openBtn = document.getElementById('openLobbyBtn');
+    const closeBtn = document.getElementById('lobbyClose');
+    const home = document.getElementById('lobbyHome');
+    const roomView = document.getElementById('lobbyRoom');
+    const launchView = document.getElementById('lobbyLaunch');
+    const tabs = document.querySelectorAll('.lobby-tab');
+    const paneHost = document.getElementById('paneHost');
+    const paneJoin = document.getElementById('paneJoin');
+    const createError = document.getElementById('createError');
+    const joinError = document.getElementById('joinError');
+
+    const storageReady = typeof window.storage !== 'undefined';
+    const myId = 'p' + Math.random().toString(36).slice(2, 9);
+    let currentCode = null;
+    let isHost = false;
+    let pollTimer = null;
+
+    function resetToHome(){
+      if(pollTimer){ clearInterval(pollTimer); pollTimer = null; }
+      currentCode = null; isHost = false;
+      roomView.style.display = 'none';
+      launchView.style.display = 'none';
+      home.style.display = 'block';
+    }
+
+    openBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      overlay.classList.add('open');
+      if(!storageReady){
+        createError.textContent = 'This lobby only works when the page is opened inside Claude.';
+        joinError.textContent = 'This lobby only works when the page is opened inside Claude.';
+      }
+    });
+    closeBtn.addEventListener('click', ()=> overlay.classList.remove('open'));
+    overlay.addEventListener('click', (e)=>{ if(e.target === overlay) overlay.classList.remove('open'); });
+    document.getElementById('closeLaunchBtn').addEventListener('click', ()=>{
+      overlay.classList.remove('open');
+      resetToHome();
+    });
+
+    tabs.forEach(t => t.addEventListener('click', ()=>{
+      tabs.forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      const hostMode = t.dataset.tab === 'host';
+      paneHost.style.display = hostMode ? 'block' : 'none';
+      paneJoin.style.display = hostMode ? 'none' : 'block';
+    }));
+
+    function genCode(){
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let c = '';
+      for(let i = 0; i < 5; i++) c += chars[Math.floor(Math.random() * chars.length)];
+      return c;
+    }
+
+    async function saveRoom(code, room){
+      return await window.storage.set('room:' + code, JSON.stringify(room), true);
+    }
+    async function loadRoom(code){
+      try{
+        const res = await window.storage.get('room:' + code, true);
+        return res ? JSON.parse(res.value) : null;
+      }catch(e){ return null; }
+    }
+
+    function renderCrew(players){
+      const el = document.getElementById('crewList');
+      el.innerHTML = '';
+      players.forEach(p=>{
+        const row = document.createElement('div');
+        row.className = 'crew-item' + (p.id === myId ? ' you' : '');
+        row.innerHTML = '<span class="dot"></span><span>' + p.name + (p.id === myId ? ' (you)' : '') + '</span>';
+        el.appendChild(row);
+      });
+    }
+
+    function enterRoom(room){
+      home.style.display = 'none';
+      launchView.style.display = 'none';
+      roomView.style.display = 'block';
+      document.getElementById('roomCodeDisplay').textContent = room.code;
+      document.getElementById('startBtn').style.display = isHost ? 'block' : 'none';
+      document.getElementById('hostHint').textContent = isHost
+        ? 'Share the code — start whenever your crew is ready.'
+        : 'Waiting on the host to start the voyage…';
+      renderCrew(room.players);
+      if(pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(pollRoom, 2500);
+    }
+
+    async function pollRoom(){
+      if(!currentCode) return;
+      const room = await loadRoom(currentCode);
+      if(!room) return;
+      renderCrew(room.players);
+      if(room.status === 'started'){
+        clearInterval(pollTimer); pollTimer = null;
+        roomView.style.display = 'none';
+        launchView.style.display = 'block';
+      }
+    }
+
+    document.getElementById('createBtn').addEventListener('click', async ()=>{
+      if(!storageReady) return;
+      createError.textContent = '';
+      const name = document.getElementById('hostName').value.trim() || 'Captain';
+      const code = genCode();
+      const room = { code, host: myId, status: 'lobby', createdAt: Date.now(), players: [{ id: myId, name }] };
+      try{
+        await saveRoom(code, room);
+        currentCode = code; isHost = true;
+        enterRoom(room);
+      }catch(e){
+        createError.textContent = 'Could not create a shoal — try again.';
+      }
+    });
+
+    document.getElementById('joinBtn').addEventListener('click', async ()=>{
+      if(!storageReady) return;
+      joinError.textContent = '';
+      const name = document.getElementById('joinName').value.trim() || 'Deckhand';
+      const code = document.getElementById('joinCode').value.trim().toUpperCase();
+      if(!code){ joinError.textContent = 'Enter a shoal code.'; return; }
+      const room = await loadRoom(code);
+      if(!room){ joinError.textContent = 'No shoal found with that code.'; return; }
+      if(!room.players.find(p => p.id === myId)){
+        room.players.push({ id: myId, name });
+      }
+      try{
+        await saveRoom(code, room);
+        currentCode = code; isHost = (room.host === myId);
+        enterRoom(room);
+      }catch(e){
+        joinError.textContent = 'Could not join — try again.';
+      }
+    });
+
+    document.getElementById('startBtn').addEventListener('click', async ()=>{
+      if(!currentCode) return;
+      const room = await loadRoom(currentCode);
+      if(!room) return;
+      room.status = 'started';
+      await saveRoom(currentCode, room);
+      clearInterval(pollTimer); pollTimer = null;
+      roomView.style.display = 'none';
+      launchView.style.display = 'block';
+    });
+
+    document.getElementById('leaveBtn').addEventListener('click', resetToHome);
+
+    document.getElementById('copyCodeBtn').addEventListener('click', ()=>{
+      if(!currentCode) return;
+      const btn = document.getElementById('copyCodeBtn');
+      const old = btn.textContent;
+      if(navigator.clipboard){
+        navigator.clipboard.writeText(currentCode).catch(()=>{});
+      }
+      btn.textContent = 'Copied!';
+      setTimeout(()=> btn.textContent = old, 1500);
+    });
+  })();
 </script>
 
 </body>
