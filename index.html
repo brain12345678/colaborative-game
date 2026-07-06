@@ -702,7 +702,7 @@
     ];
 
     let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync, buildIndex, loopFrame, camera;
-    const cameraHeight = 18;
+    const cameraHeight = 12;
     localPlayerName = sessionStorage.getItem(playerNameStorageKey) || '';
 
     function islandPoint(angle, radiusFactor){
@@ -1225,9 +1225,9 @@
       const fov = Math.PI / 3.2;
       const visible = Math.abs(rel) < fov * 1.08 && dist > 6;
       const screenX = W / 2 + (rel / fov) * (W * 0.4);
-      const groundY = H * 0.74;
-      const depth = Math.max(0.18, Math.min(1.4, 220 / (dist + 28)));
-      const screenY = groundY - Math.min(46, dist * 0.05) - (depth - 0.18) * 34 - camera.height * 0.45;
+      const groundY = H * 0.86;
+      const depth = Math.max(0.2, Math.min(1.45, 220 / (dist + 28)));
+      const screenY = groundY - Math.min(96, dist * 0.06) - (depth - 0.2) * 22;
       return { visible, x: screenX, y: screenY, depth, dist };
     }
 
@@ -1259,7 +1259,7 @@
       water.addColorStop(1, '#072529');
       ctx.fillStyle = water; ctx.fillRect(0, H * 0.55, W, H * 0.45);
       ctx.strokeStyle = 'rgba(243,247,242,0.16)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, H * 0.55); ctx.lineTo(W, H * 0.55); ctx.stroke();
-      ctx.fillStyle = 'rgba(14,32,34,0.7)'; ctx.fillRect(0, H * 0.78, W, H * 0.22);
+      ctx.fillStyle = 'rgba(14,32,34,0.7)'; ctx.fillRect(0, H * 0.84, W, H * 0.16);
 
       const islandPoints = [];
       for(let i = 0; i <= 24; i++){
@@ -1329,7 +1329,7 @@
         ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 1.4; ctx.stroke();
         ctx.font = `${10 * p.depth}px Inter, sans-serif`; ctx.fillStyle = '#f3f7f2'; ctx.fillText(entry.name, p.x - 16 * p.depth, p.y + 18 * p.depth);
       });
-      const localP = { visible: true, x: W / 2, y: H / 2 + 6, depth: 1 };
+      const localP = { visible: true, x: W / 2, y: H * 0.84 - 8, depth: 1 };
       ctx.beginPath(); ctx.arc(localP.x, localP.y, 7 * localP.depth, 0, Math.PI * 2); ctx.fillStyle = player.color || '#ff6b4a'; ctx.fill();
       ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 2; ctx.stroke();
       ctx.strokeStyle = 'rgba(243,247,242,0.7)'; ctx.beginPath(); ctx.moveTo(W / 2 - 4, H * 0.5 + 6); ctx.lineTo(W / 2 + 4, H * 0.5 + 6); ctx.moveTo(W / 2, H * 0.5 + 2); ctx.lineTo(W / 2, H * 0.5 + 10); ctx.stroke();
