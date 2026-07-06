@@ -1130,6 +1130,38 @@
       updateHud();
     }
 
+    function draw3DBox(x, y, w, h, depth, frontColor, topColor, sideColor){
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.fillRect(x + 6, y + 6, w, h);
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + w, y);
+      ctx.lineTo(x + w + depth, y - depth);
+      ctx.lineTo(x + depth, y - depth);
+      ctx.closePath();
+      ctx.fillStyle = topColor;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(x + w, y);
+      ctx.lineTo(x + w + depth, y - depth);
+      ctx.lineTo(x + w + depth, y + h - depth);
+      ctx.lineTo(x + w, y + h);
+      ctx.closePath();
+      ctx.fillStyle = sideColor;
+      ctx.fill();
+
+      ctx.fillStyle = frontColor;
+      ctx.fillRect(x, y, w, h);
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 1.1;
+      ctx.strokeRect(x, y, w, h);
+      ctx.restore();
+    }
+
     function draw(){
       ctx.clearRect(0, 0, W, H);
       // water
@@ -1166,30 +1198,18 @@
       walls.forEach(w=>{
         ctx.globalAlpha = 0.45 + 0.55 * (w.hp / w.max);
         if(w.kind === 'gate'){
-          ctx.fillStyle = w.color;
-          ctx.fillRect(w.x - 12, w.y - 10, 8, 20);
-          ctx.fillRect(w.x + 4, w.y - 10, 8, 20);
-          ctx.fillRect(w.x - 10, w.y - 18, 20, 6);
-          ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 1.2; ctx.strokeRect(w.x - 12, w.y - 10, 8, 20); ctx.strokeRect(w.x + 4, w.y - 10, 8, 20);
+          draw3DBox(w.x - 12, w.y - 10, 8, 20, 4, w.color, '#8a5a3c', '#5f4330');
+          draw3DBox(w.x + 4, w.y - 10, 8, 20, 4, w.color, '#8a5a3c', '#5f4330');
+          draw3DBox(w.x - 10, w.y - 18, 20, 6, 3, '#6d4d35', '#8c6848', '#4d3428');
         } else if(w.kind === 'tower'){
-          ctx.fillStyle = w.color;
-          ctx.fillRect(w.x - 10, w.y - 8, 20, 16);
-          ctx.fillRect(w.x - 14, w.y - 12, 28, 6);
-          ctx.fillRect(w.x - 6, w.y - 24, 12, 12);
-          ctx.strokeStyle = '#e7c989'; ctx.lineWidth = 1.2; ctx.strokeRect(w.x - 10, w.y - 8, 20, 16);
+          draw3DBox(w.x - 10, w.y - 8, 20, 16, 5, w.color, '#8a9297', '#61676d');
+          draw3DBox(w.x - 6, w.y - 24, 12, 12, 4, '#7b8288', '#a0a4a8', '#5e6369');
         } else if(w.kind === 'beacon'){
-          ctx.fillStyle = w.color;
-          ctx.fillRect(w.x - 5, w.y - 18, 10, 28);
-          ctx.fillRect(w.x - 12, w.y - 22, 24, 6);
-          ctx.fillRect(w.x - 8, w.y - 28, 16, 8);
-          ctx.fillStyle = '#6ef2b0'; ctx.fillRect(w.x - 6, w.y - 30, 12, 4);
-          ctx.strokeStyle = '#f3f7f2'; ctx.lineWidth = 1.1; ctx.strokeRect(w.x - 5, w.y - 18, 10, 28);
+          draw3DBox(w.x - 5, w.y - 18, 10, 28, 3, w.color, '#8b5d3b', '#5d3e2a');
+          draw3DBox(w.x - 12, w.y - 22, 24, 6, 3, '#7a4f2f', '#a66d47', '#543121');
+          draw3DBox(w.x - 8, w.y - 28, 16, 8, 3, '#6ef2b0', '#9ff9c8', '#3aa96e');
         } else {
-          ctx.fillStyle = w.color;
-          ctx.fillRect(w.x - 12, w.y - 9, 24, 18);
-          ctx.fillStyle = '#a67549';
-          ctx.fillRect(w.x - 12, w.y - 9, 24, 6);
-          ctx.strokeStyle = '#e7c989'; ctx.lineWidth = 1.4; ctx.strokeRect(w.x - 12, w.y - 9, 24, 18);
+          draw3DBox(w.x - 12, w.y - 9, 24, 18, 5, w.color, '#a67549', '#6e4627');
         }
         ctx.globalAlpha = 1;
       });
