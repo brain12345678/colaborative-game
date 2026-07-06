@@ -848,6 +848,13 @@
         syncLobbyFromStorage();
       }
     });
+    window.addEventListener('focus', syncLobbyFromStorage);
+    document.addEventListener('visibilitychange', ()=>{
+      if(!document.hidden){
+        syncLobbyFromStorage();
+      }
+    });
+    setInterval(syncLobbyFromStorage, 1000);
 
     function openGame(){
       overlay.classList.add('open');
