@@ -678,8 +678,8 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
-    const mapW = 1400;
-    const mapH = 900;
+    const mapW = 2200;
+    const mapH = 1400;
     const cx = mapW / 2;
     const cy = mapH / 2;
     const islandR = 260;
@@ -702,7 +702,9 @@
       { key:'wall', name:'Drift Wall', wood:3, coral:1, hp:40, color:'#7a5739' },
       { key:'gate', name:'Rust Gate', ore:2, wood:2, hp:58, color:'#6e574b' },
       { key:'tower', name:'Scrap Tower', ore:4, coral:2, hp:72, color:'#5e6368' },
-      { key:'beacon', name:'Tide Beacon', wood:2, ore:2, coral:1, hp:64, color:'#7b4d33' }
+      { key:'beacon', name:'Tide Beacon', wood:2, ore:2, coral:1, hp:64, color:'#7b4d33' },
+      { key:'trap', name:'Rust Trap', wood:2, ore:3, hp:36, color:'#4e5a63' },
+      { key:'turret', name:'Wire Turret', ore:5, coral:2, wood:2, hp:88, color:'#7d9a8a' }
     ];
 
     let player, resources, nodes, walls, enemies, phase, phaseTimer, dayNumber, nightsSurvived, spawnTimer, running, keys, lastTime, roomCode, localPlayerName, localPlayerColor, sharedPlayers, lastSharedSync, buildIndex, loopFrame, camera, weapons;
@@ -758,7 +760,7 @@
       player = { x: cx, y: cy, tx: cx, ty: cy, angle: -Math.PI / 2, speed: 130, hp: 100, maxHp: 100, attackCd: 0, name: localPlayerName || 'Captain', color: localPlayerColor, weapon: null };
       camera = { x: player.x, y: player.y };
       refreshSharedPlayersFromRoom();
-      resources = { wood: 6, coral: 2, ore: 0 };
+      resources = { wood: 10, coral: 4, ore: 2 };
       nodes = makeNodes();
       weapons = makeWeapons();
       walls = [
@@ -1315,7 +1317,19 @@
       walls.forEach(w=>{
         ctx.globalAlpha = 0.45 + 0.55 * (w.hp / w.max);
         ctx.fillStyle = w.color;
-        ctx.fillRect(w.x - 12, w.y - 10, 24, 20);
+        if(w.kind === 'gate'){
+          ctx.fillRect(w.x - 16, w.y - 18, 32, 36);
+        } else if(w.kind === 'tower'){
+          ctx.fillRect(w.x - 18, w.y - 18, 36, 36);
+        } else if(w.kind === 'beacon'){
+          ctx.fillRect(w.x - 10, w.y - 24, 20, 48);
+        } else if(w.kind === 'trap'){
+          ctx.fillRect(w.x - 10, w.y - 10, 20, 20);
+        } else if(w.kind === 'turret'){
+          ctx.fillRect(w.x - 14, w.y - 14, 28, 28);
+        } else {
+          ctx.fillRect(w.x - 12, w.y - 10, 24, 20);
+        }
         ctx.globalAlpha = 1;
       });
 
