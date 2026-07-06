@@ -97,7 +97,8 @@
   .btn-ghost{
     border:1px solid var(--foam-dim); padding:15px 32px; border-radius:2px;
     font-weight:500; font-size:0.95rem; transition:border-color .2s, background .2s;
-    display:flex; align-items:center; gap:8px;
+    display:flex; align-items:center; gap:8px; background:transparent; color:inherit;
+    font:inherit; cursor:pointer;
   }
   .btn-ghost:hover{border-color:var(--foam); background:rgba(255,255,255,0.05);}
 
@@ -310,7 +311,7 @@
   <p class="tagline">No boat. No crew. No one to split the work with. Just a scrap of reef, whatever you can pull from the water yourself, and everything that swims closer once the sun goes down.</p>
   <div class="hero-ctas">
     <a href="#signup" class="btn-primary">Wishlist on Steam</a>
-    <a href="#lobby" class="btn-ghost" id="openGameBtn">▸ Lock in for multiplayer</a>
+    <button type="button" class="btn-ghost" id="openGameBtn">▸ Lock in for multiplayer</button>
   </div>
 
   <div class="island-scene">
@@ -1132,8 +1133,9 @@
 
     function draw3DBox(x, y, w, h, depth, frontColor, topColor, sideColor){
       ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.fillStyle = 'rgba(0,0,0,0.24)';
       ctx.fillRect(x + 6, y + 6, w, h);
+      ctx.fillRect(x + 6 + depth, y + 6 - depth, w, h);
 
       ctx.beginPath();
       ctx.moveTo(x, y);
@@ -1156,9 +1158,16 @@
       ctx.fillStyle = frontColor;
       ctx.fillRect(x, y, w, h);
 
-      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-      ctx.lineWidth = 1.1;
+      ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+      ctx.lineWidth = 1.2;
       ctx.strokeRect(x, y, w, h);
+      ctx.beginPath();
+      ctx.moveTo(x + depth, y - depth);
+      ctx.lineTo(x + w + depth, y - depth);
+      ctx.lineTo(x + w + depth, y + h - depth);
+      ctx.lineTo(x + depth, y + h - depth);
+      ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+      ctx.stroke();
       ctx.restore();
     }
 
