@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATOLL — Hold the Tide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#050f16;
+    --tide-navy:#123a3e;
+    --lagoon:#1f5f63;
+    --sand:#e7c989;
+    --coral:#ff6b4a;
+    --bioglow:#6ef2b0;
+    --abyssal-blue:#3a86ff;
+    --iron-gray:#a1a1a6;
+    --foam:#f3f7f2;
+    --foam-dim:rgba(243,247,242,0.62);
+    --line:rgba(243,247,242,0.14);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--abyss);
+    color:var(--foam);
+    font-family:'Inter', sans-serif;
+    overflow:hidden;
+    user-select:none;
+    height:100vh;
+  }
+  #landing-page {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: radial-gradient(circle at center, #1f5f63 0%, var(--abyss) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: opacity 0.5s ease;
+  }
+  .lobby-card {
+    background: rgba(5, 15, 22, 0.9);
+    border: 1px solid var(--line);
+    padding: 40px;
+    border-radius: 6px;
+    backdrop-filter: blur(12px);
+    width: 420px;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  }
+  .lobby-card h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 42px;
+    color: var(--sand);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+  .lobby-card p {
+    font-size: 13px;
+    color: var(--foam-dim);
+    margin-bottom: 30px;
+  }
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    margin-bottom: 20px;
+  }
+  .input-group label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--sand);
+    margin-bottom: 6px;
+  }
+  .input-group input {
+    background: rgba(243,247,242,0.05);
+    border: 1px solid var(--line);
+    padding: 12px;
+    color: var(--foam);
+    font-family: inherit;
+    font-size: 14px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-group input:focus {
+    border-color: var(--bioglow);
+  }
+  .btn-join {
+    width: 100%;
+    background: var(--bioglow);
+    color: #050f16;
+    border: none;
+    padding: 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    transition: background 0.2s;
+    margin-top: 10px;
+  }
+  .btn-join:hover {
+    background: #52d296;
+  }
+  #canvas {
+    display: none; 
+    width: 100vw;
+    height: 100vh;
+    background: #061722;
+  }
+  .ui-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    display: none; 
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 24px;
+    box-sizing: border-box;
+    z-index: 10;
+  }
+  .panel {
+    background: rgba(5, 15, 22, 0.85);
+    border: 1px solid var(--line);
+    padding: 16px;
+    border-radius: 4px;
+    pointer-events: auto;
+    backdrop-filter: blur(8px);
+  }
+  .top-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+  .room-banner {
+    color: var(--bioglow);
+    font-size: 11px;
+    margin-bottom: 4px;
+    border-bottom: 1px dashed var(--line);
+    padding-bottom: 4px;
+  }
+  .resources-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .res-item {
+    background: rgba(243,247,242,0.05);
+    padding: 4px 6px;
+    border-radius: 2px;
+    border-left: 3px solid var(--sand);
+    font-size: 10px;
+  }
+  .res-item.wood { border-left-color: #b08d57; }
+  .res-item.coral { border-left-color: var(--coral); }
+  .res-item.scrap { border-left-color: #8fa4ad; }
+  .res-item.iron { border-left-color: var(--iron-gray); }
+  .res-item.glow { border-left-color: var(--abyssal-blue); }
+  
+  .bottom-center {
+    align-self: center;
+    width: 640px;
+    max-width: 90vw;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .crafting-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--foam-dim);
+    display: flex;
+    justify-content: space-between;
+  }
+  .recipe-carousel {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .recipe-card {
+    flex: 0 0 145px;
+    background: rgba(243,247,242,0.03);
+    border: 1px solid rgba(243,247,242,0.1);
+    padding: 10px;
+    border-radius: 3px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .recipe-card.selected {
+    background: rgba(243,247,242,0.1);
+    border-color: var(--sand);
+    transform: translateY(-2px);
+  }
+  .recipe-card.locked {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .recipe-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+  .recipe-cost { font-size: 9px; font-family: 'IBM Plex Mono', monospace; color: var(--foam-dim); line-height: 1.2; }
+  
+  .status-bars {
+    position: absolute;
+    top: 24px; right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 220px;
+  }
+  .bar-container {
+    background: rgba(0,0,0,0.4);
+    height: 18px;
+    border: 1px solid var(--line);
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    transition: width 0.1s ease-out;
+  }
+  #hp-fill { background: var(--coral); width: 100%; }
+  #shield-fill { background: #45a2bf; width: 0%; }
+  #oxygen-container { display: none; }
+  #oxygen-fill { background: var(--abyssal-blue); width: 100%; }
+  .bar-label {
+    position: absolute;
+    width: 100%; height: 100%;
+    top: 0; left: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
+  #weapon-status-panel {
+    margin-top: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--coral);
+    text-align: right;
+  }
+  #death-screen {
+    position: absolute;
+    top:0; left:0; width:100%; height:100%;
+    background: rgba(5, 15, 22, 0.95);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.5s;
+  }
+  #death-screen.active { opacity: 1; pointer-events: auto; }
+  #death-screen h1 { font-family: 'Fraunces', serif; font-size: 48px; color: var(--coral); margin-bottom: 12px; }
+  #death-screen button {
+    background: transparent; border: 1px solid var(--foam); color: var(--foam);
+    padding: 10px 24px; font-family: 'IBM Plex Mono', monospace; cursor: pointer; transition: 0.2s;
+  }
+  #death-screen button:hover { background: var(--foam); color: #050f16; }
+  
+  .table-indicator { color: var(--bioglow); font-weight: bold; }
+  .table-missing { color: var(--coral); }
+  #host-badge { font-size: 11px; color: var(--sand); background: rgba(231,201,137,0.1); padding: 2px 6px; border-radius: 3px; display: inline-block; margin-top: 4px;}
+</style>
+</head>
+<body>
+
+<div id="landing-page">
+  <div class="lobby-card">
+    <h1>ATOLL</h1>
+    <p>2D Real-Time Synced Abyssal Strategy Node</p>
+    <div class="input-group">
+      <label for="username">Identity Tag Name</label>
+      <input type="text" id="username" placeholder="e.g., AtollScout_7" maxlength="14">
+    </div>
+    <div class="input-group">
+      <label for="room-id">Shared Network Hub Room ID</label>
+      <input type="text" id="room-id" value="atoll-oceanic-grid" placeholder="e.g., sector-7" maxlength="20">
+    </div>
+    <button class="btn-join" onclick="initiateGameConnection()">CONNECT TO REEF RADIAL</button>
+  </div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<div class="ui-overlay" id="game-ui">
+  <div class="panel top-left">
+    <div class="room-banner">GRID HUB: <span id="ui-room-name">...</span></div>
+    <div>CYCLE STAGE: <span id="ui-day">1</span> (<span id="ui-phase">DAYLIGHT</span>)</div>
+    <div>TIDE SEQUENCE: <span id="ui-timer">30</span>s</div>
+    <div id="host-badge">Role: Syncing...</div>
+    <div class="resources-grid">
+      <div class="res-item wood">Wood: <span id="res-wood">0</span></div>
+      <div class="res-item coral">Coral: <span id="res-coral">0</span></div>
+      <div class="res-item scrap">Ore: <span id="res-scrap">0</span></div>
+      <div class="res-item iron">Iron: <span id="res-iron">0</span></div>
+      <div class="res-item glow">Glow: <span id="res-glow">0</span></div>
+    </div>
+  </div>
+
+  <div class="status-bars">
+    <div class="bar-container">
+      <div id="hp-fill" class="bar-fill"></div>
+      <div class="bar-label">VITALS: <span id="lbl-hp">100</span>/100</div>
+    </div>
+    <div class="bar-container">
+      <div id="shield-fill" class="bar-fill"></div>
+      <div class="bar-label">SHIELD CORE: <span id="lbl-shield">0</span>/100</div>
+    </div>
+    <div class="bar-container" id="oxygen-container">
+      <div id="oxygen-fill" class="bar-fill"></div>
+      <div class="bar-label">OXYGEN MATRIX: <span id="lbl-oxygen">100</span>%</div>
+    </div>
+    <div id="weapon-status-panel">WEAPON STATUS: UNARMED</div>
+  </div>
+
+  <div class="panel bottom-center">
+    <div class="crafting-title">
+      <span>Radial Schematics ([Q]/[E] to scroll, [Space] to deploy / craft)</span>
+      <span id="proximity-status" class="table-missing">Workbench Out of Range</span>
+    </div>
+    <div class="recipe-carousel" id="recipe-list"></div>
+  </div>
+</div>
+
+<div id="death-screen">
+  <h1>Structure Submerged</h1>
+  <p style="margin-bottom:24px; font-family:'IBM Plex Mono'; color: var(--foam-dim);">Survival span: <span id="death-days">0</span> cycles.</p>
+  <button onclick="resetGame()">RE-INITIALIZE GRID</button>
+</div>
+
+<script>
+// --- MULTIPLAYER CORE WITH HOST/CLIENT ARCHITECTURE ---
+let multiplayerRoomId = 'atoll-solo';
+let chosenName = 'Mariner';
+window.playerId = 'p_' + Math.random().toString(36).substr(2, 9);
+const sessionStartTime = Date.now();
+
+let networkChannel;
+let remotePlayersData = {}; 
+let isHost = true; 
+let roomPeers = {};
+
+function setupMultiplayerChannel() {
+  networkChannel = new BroadcastChannel(`atoll_channel_2d_${multiplayerRoomId}`);
+  networkChannel.onmessage = (event) => {
+    const msg = event.data;
+    if (!msg || !msg.id || msg.id === window.playerId) return;
+
+    if (msg.type === 'update') {
+      remotePlayersData[msg.id] = { x: msg.x, y: msg.y, angle: msg.angle, color: msg.color, name: msg.name, lastSeen: Date.now() };
+      roomPeers[msg.id] = msg.sessionStartTime;
+      determineHostRole();
+    } 
+    else if (msg.type === 'leave') {
+      delete remotePlayersData[msg.id];
+      delete roomPeers[msg.id];
+      determineHostRole();
+    } 
+    else if (msg.type === 'ping') {
+      roomPeers[msg.id] = msg.sessionStartTime;
+      determineHostRole();
+      broadcastLocalState();
+    }
+    else if (msg.type === 'worldSync' && !isHost) {
+      cycleTime = msg.cycleTime;
+      isNight = msg.isNight;
+      currentDay = msg.currentDay;
+      syncEnemiesFromHost(msg.enemies);
+      syncResourcesFromHost(msg.resources);
+    }
+  };
+  networkChannel.postMessage({ type: 'ping', id: window.playerId, sessionStartTime });
+}
+
+function determineHostRole() {
+  let olderPeerExists = false;
+  for (let id in roomPeers) {
+    if (roomPeers[id] < sessionStartTime) olderPeerExists = true;
+    else if (roomPeers[id] === sessionStartTime && id < window.playerId) olderPeerExists = true;
+  }
+  isHost = !olderPeerExists;
+  document.getElementById('host-badge').innerText = isHost ? "Role: Room Host (Simulating World)" : "Role: Client (Synced)";
+}
+
+function broadcastLocalState() {
+  if (!networkChannel) return;
+  networkChannel.postMessage({
+    type: 'update', id: window.playerId, sessionStartTime,
+    x: player.x, y: player.y, angle: player.angle, color: player.color, name: chosenName
+  });
+}
+
+function broadcastWorldState() {
+  if (!networkChannel || !isHost) return;
+  networkChannel.postMessage({
+    type: 'worldSync', id: window.playerId,
+    cycleTime, isNight, currentDay,
+    enemies: enemies.map(e => ({ id: e.id, x: e.x, y: e.y, hp: e.hp })),
+    resources: resources.map(r => ({ id: r.id, x: r.x, y: r.y, type: r.type }))
+  });
+}
+
+function initiateGameConnection() {
+  const userIn = document.getElementById('username').value.trim();
+  const roomIn = document.getElementById('room-id').value.trim();
+  chosenName = userIn ? userIn : "Mariner_" + window.playerId.substr(0,3);
+  multiplayerRoomId = roomIn ? roomIn : "atoll-oceanic-grid";
+  document.getElementById('ui-room-name').innerText = multiplayerRoomId;
+  document.getElementById('landing-page').style.opacity = 0;
+  setTimeout(() => {
+    document.getElementById('landing-page').style.display = 'none';
+    document.getElementById('canvas').style.display = 'block';
+    document.getElementById('game-ui').style.display = 'flex';
+    setupMultiplayerChannel();
+    initEngine();
+  }, 500);
+}
+
+// --- 2D CANVAS GAME ENGINE ---
+let canvas, ctx;
+let gameActive = false, lastTime = 0;
+
+let inventory = { wood: 12, coral: 6, scrap: 0, iron: 0, glow: 0 };
+let craftedWeapons = { spear: false, blaster: false };
+
+const recipes = [
+  { id: 'crafting_table', name: 'Crafting Table', type: 'structure', cost: { wood: 4, coral: 0, scrap: 0, iron: 0, glow: 0 }, requiresTable: false, color: '#aa7a44' },
+  { id: 'wood_wall',     name: 'Driftwood Wall',  type: 'structure', cost: { wood: 3, coral: 0, scrap: 0, iron: 0, glow: 0 }, requiresTable: false, color: '#826642' },
+  { id: 'shield_pylon',  name: 'Shield Pylon',    type: 'structure', cost: { wood: 5, coral: 5, scrap: 2, iron: 0, glow: 0 }, requiresTable: true,  color: '#45a2bf' },
+  { id: 'oxygen_sub',    name: 'O2 Substation',   type: 'structure', cost: { wood: 4, coral: 2, scrap: 0, iron: 3, glow: 0 }, requiresTable: true,  color: '#3a86ff' },
+  { id: 'harpoon_spear', name: 'Harpoon Launcher',type: 'weapon',    cost: { wood: 6, coral: 0, scrap: 4, iron: 2, glow: 0 }, requiresTable: true,  color: '#f59e0b', weaponId: 'spear' },
+  { id: 'abyss_blaster', name: 'Abyssal Blaster', type: 'weapon',    cost: { wood: 0, coral: 4, scrap: 2, iron: 6, glow: 5 }, requiresTable: true,  color: '#a855f7', weaponId: 'blaster' }
+];
+
+let buildIndex = 0, isNearTable = false;
+const islandRadius = 240;
+let player = { x: 0, y: 0, angle: 0, hp: 100, maxHp: 100, shield: 0, maxShield: 100, oxygen: 100, maxOxygen: 100, speed: 170, color: '#' + Math.floor(Math.random()*16777215).toString(16) };
+let input = { w: false, a: false, s: false, d: false }, mouse = { x: 0, y: 0 };
+
+let resources = [], structures = [], enemies = [], projectiles = [];
+let cycleTime = 0; const phaseDuration = 30; let currentDay = 1, isNight = false;
+
+function initEngine() {
+  canvas = document.getElementById('canvas');
+  ctx = canvas.getContext('2d');
+  gameActive = true;
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  if (isHost) initResources();
+  setupUI();
+  updateUI();
+  lastTime = performance.now();
+  requestAnimationFrame(tick2D);
+}
+
+function resizeCanvas() {
+  if (canvas) {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+}
+
+function initResources() {
+  resources = [];
+  for(let i=0; i<12; i++) spawnResourceHost('wood', false); 
+  for(let i=0; i<8; i++) spawnResourceHost('coral', false); 
+  for(let i=0; i<4; i++) spawnResourceHost('scrap', false); 
+  for(let i=0; i<8; i++) spawnResourceHost('iron', true); 
+  for(let i=0; i<6; i++) spawnResourceHost('glow', true); 
+}
+
+function spawnResourceHost(type, deepSea = false) {
+  let angle = Math.random() * Math.PI * 2;
+  let dist = deepSea ? (islandRadius + 50 + Math.random() * 220) : (30 + Math.random() * (islandRadius - 70));
+  resources.push({
+    id: 'res_' + Math.random().toString(36).substr(2, 9),
+    type: type,
+    x: Math.cos(angle) * dist,
+    y: Math.sin(angle) * dist
+  });
+}
+
+function syncEnemiesFromHost(hostEnemies) { enemies = hostEnemies; }
+function syncResourcesFromHost(hostResources) { resources = hostResources; }
+
+function setupUI() {
+  const list = document.getElementById('recipe-list'); list.innerHTML = '';
+  recipes.forEach((rec, i) => {
+    let card = document.createElement('div'); card.className = `recipe-card ${i === buildIndex ? 'selected' : ''}`; card.id = `recipe-${i}`;
+    let costs = []; 
+    if(rec.cost.wood > 0) costs.push(`${rec.cost.wood}W`); if(rec.cost.coral > 0) costs.push(`${rec.cost.coral}C`); 
+    if(rec.cost.scrap > 0) costs.push(`${rec.cost.scrap}S`); if(rec.cost.iron > 0) costs.push(`${rec.cost.iron}I`);
+    if(rec.cost.glow > 0) costs.push(`${rec.cost.glow}G`);
+    card.innerHTML = `<div class="recipe-name">${rec.name}</div><div class="recipe-cost">${costs.join(' ')}</div><div style="font-size:8px; color:var(--bioglow); margin-top:2px;">${rec.requiresTable ? 'Requires Table' : 'Basic'}</div>`;
+    card.onclick = () => { if(gameActive) { buildIndex = i; updateUI(); } }; list.appendChild(card);
+  });
+}
+
+function updateUI() {
+  document.getElementById('res-wood').innerText = inventory.wood; document.getElementById('res-coral').innerText = inventory.coral; document.getElementById('res-scrap').innerText = inventory.scrap;
+  document.getElementById('res-iron').innerText = inventory.iron; document.getElementById('res-glow').innerText = inventory.glow;
+  document.getElementById('ui-day').innerText = currentDay; document.getElementById('ui-phase').innerText = isNight ? "ABYSSAL NIGHTFALL" : "BRIGHT DAYLIGHT";
+  document.getElementById('ui-timer').innerText = Math.ceil(phaseDuration - (cycleTime % phaseDuration));
+  document.getElementById('lbl-hp').innerText = Math.round(player.hp); document.getElementById('hp-fill').style.width = `${(player.hp/player.maxHp)*100}%`;
+  document.getElementById('lbl-shield').innerText = Math.round(player.shield); document.getElementById('shield-fill').style.width = `${(player.shield/player.maxShield)*100}%`;
+  document.getElementById('lbl-oxygen').innerText = Math.round(player.oxygen); document.getElementById('oxygen-fill').style.width = `${player.oxygen}%`;
+  
+  let wLabel = "WEAPON STATUS: UNARMED (Craft launcher)";
+  if (craftedWeapons.blaster) wLabel = "WEAPON STATUS: ABYSSAL BLASTER UNLOCKED";
+  else if (craftedWeapons.spear) wLabel = "WEAPON STATUS: HARPOON SPEAR UNLOCKED";
+  document.getElementById('weapon-status-panel').innerText = wLabel;
+  document.getElementById('weapon-status-panel').style.color = (craftedWeapons.spear || craftedWeapons.blaster) ? 'var(--bioglow)' : 'var(--coral)';
+
+  recipes.forEach((rec, i) => {
+    let card = document.getElementById(`recipe-${i}`); if(!card) return; card.className = `recipe-card ${i === buildIndex ? 'selected' : ''}`;
+    let isWeaponOwned = rec.type === 'weapon' && craftedWeapons[rec.weaponId];
+    if(inventory.wood < rec.cost.wood || inventory.coral < rec.cost.coral || inventory.scrap < rec.cost.scrap || inventory.iron < rec.cost.iron || inventory.glow < rec.cost.glow || (rec.requiresTable && !isNearTable) || isWeaponOwned) {
+      card.classList.add('locked');
+    }
+  });
+  const proxIndicator = document.getElementById('proximity-status'); proxIndicator.innerText = isNearTable ? "Near Active Workbench" : "Workbench Out of Range"; proxIndicator.className = isNearTable ? "table-indicator" : "table-missing";
+}
+
+// --- HARDWARE INTERFACES ---
+window.addEventListener('keydown', (e) => {
+  if(!gameActive) return;
+  if(e.key.toLowerCase() === 'w') input.w = true; if(e.key.toLowerCase() === 'a') input.a = true; if(e.key.toLowerCase() === 's') input.s = true; if(e.key.toLowerCase() === 'd') input.d = true;
+  if(e.key.toLowerCase() === 'q') { buildIndex = (buildIndex - 1 + recipes.length) % recipes.length; updateUI(); }
+  if(e.key.toLowerCase() === 'e') { buildIndex = (buildIndex + 1) % recipes.length; updateUI(); }
+  if(e.key === ' ') { e.preventDefault(); attemptBuildOrCraft(); }
+});
+window.addEventListener('keyup', (e) => {
+  if(e.key.toLowerCase() === 'w') input.w = false; if(e.key.toLowerCase() === 'a') input.a = false; if(e.key.toLowerCase() === 's') input.s = false; if(e.key.toLowerCase() === 'd') input.d = false;
+});
+window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+window.addEventListener('mousedown', (e) => {
+  if(!gameActive || e.button !== 0) return;
+  if (!craftedWeapons.spear && !craftedWeapons.blaster) return;
+
+  let dx = mouse.x - canvas.width/2;
+  let dy = mouse.y - canvas.height/2;
+  let ang = Math.atan2(dy, dx);
+  
+  let pSpeed = craftedWeapons.blaster ? 420 : 280;
+  let pDamage = craftedWeapons.blaster ? 30 : 14;
+  let pColor = craftedWeapons.blaster ? '#a855f7' : '#f59e0b';
+  let pRadius = craftedWeapons.blaster ? 5 : 3;
+
+  projectiles.push({
+    x: player.x, y: player.y,
+    vx: Math.cos(ang) * pSpeed, vy: Math.sin(ang) * pSpeed,
+    damage: pDamage, color: pColor, radius: pRadius,
+    range: 400, traveled: 0
+  });
+});
+
+function attemptBuildOrCraft() {
+  let recipe = recipes[buildIndex]; 
+  if ((recipe.requiresTable && !isNearTable) || inventory.wood < recipe.cost.wood || inventory.coral < recipe.cost.coral || inventory.scrap < recipe.cost.scrap || inventory.iron < recipe.cost.iron || inventory.glow < recipe.cost.glow) return;
+  
+  if (recipe.type === 'weapon') {
+    if (craftedWeapons[recipe.weaponId]) return;
+    craftedWeapons[recipe.weaponId] = true;
+  } else {
+    let bx = player.x + Math.cos(player.angle) * 30;
+    let by = player.y + Math.sin(player.angle) * 30;
+    structures.push({
+      id: 'struct_' + Math.random().toString(36).substr(2, 9),
+      type: recipe.id, x: bx, y: by,
+      hp: recipe.id === 'wood_wall' ? 180 : 100, color: recipe.color
+    });
+  }
+
+  inventory.wood -= recipe.cost.wood; inventory.coral -= recipe.cost.coral; inventory.scrap -= recipe.cost.scrap; inventory.iron -= recipe.cost.iron; inventory.glow -= recipe.cost.glow;
+  updateUI();
+}
+
+function tick2D(now) {
+  if(!gameActive) return; requestAnimationFrame(tick2D);
+  let delta = (now - lastTime) / 1000;
+  if(delta > 0.1) delta = 0.1;
+  lastTime = now;
+
+  if (isHost) {
+    cycleTime += delta;
+    let nightCheck = (Math.floor(cycleTime / phaseDuration) % 2 === 1);
+    if(nightCheck !== isNight) {
+      isNight = nightCheck;
+      if(!isNight) {
+        currentDay++;
+        spawnResourceHost('wood', false); spawnResourceHost('coral', false);
+        if(Math.random() > 0.4) spawnResourceHost('iron', true);
+        if(Math.random() > 0.4) spawnResourceHost('glow', true);
+      }
+      updateUI();
+    }
+    processHostEnemySimulation(delta);
+    broadcastWorldState();
+  }
+
+  let mx = 0, my = 0; if(input.w) my -= 1; if(input.s) my += 1; if(input.a) mx -= 1; if(input.d) mx += 1;
+  if(mx !== 0 || my !== 0) {
+    let len = Math.hypot(mx, my);
+    player.x += (mx / len) * player.speed * delta;
+    player.y += (my / len) * player.speed * delta;
+    if(Math.hypot(player.x, player.y) > 480) {
+      let angle = Math.atan2(player.y, player.x);
+      player.x = Math.cos(angle) * 480; player.y = Math.sin(angle) * 480;
+    }
+  }
+  player.angle = Math.atan2(mouse.y - canvas.height/2, mouse.x - canvas.width/2);
+  broadcastLocalState();
+
+  let distFromIsland = Math.hypot(player.x, player.y);
+  let nearO2Substation = false;
+  structures.forEach(s => {
+    if(s.type === 'oxygen_sub' && Math.hypot(player.x - s.x, player.y - s.y) < 80) nearO2Substation = true;
+  });
+
+  if (distFromIsland > islandRadius && !nearO2Substation) {
+    document.getElementById('oxygen-container').style.display = 'block';
+    player.oxygen = Math.max(0, player.oxygen - 14 * delta);
+    if(player.oxygen <= 0) {
+      player.hp -= 12 * delta;
+      updateUI();
+      if(player.hp <= 0) gameOver();
+    }
+    updateUI();
+  } else {
+    if(player.oxygen < 100) {
+      player.oxygen = Math.min(100, player.oxygen + 45 * delta);
+      updateUI();
+      if(player.oxygen >= 100 && distFromIsland <= islandRadius) document.getElementById('oxygen-container').style.display = 'none';
+    }
+  }
+
+  resources.forEach((res, idx) => {
+    if(Math.hypot(player.x - res.x, player.y - res.y) < 16) {
+      inventory[res.type] = (inventory[res.type] || 0) + 2;
+      if (networkChannel) networkChannel.postMessage({ type: 'leave', id: res.id }); 
+      resources.splice(idx, 1);
+      updateUI();
+    }
+  });
+
+  let nearTableCheck = false;
+  let shieldGen = 0;
+  structures.forEach(s => {
+    if(s.type === 'crafting_table' && Math.hypot(player.x - s.x, player.y - s.y) < 55) nearTableCheck = true;
+    if(s.type === 'shield_pylon' && Math.hypot(player.x - s.x, player.y - s.y) < 130) shieldGen += 10 * delta;
+  });
+  if(nearTableCheck !== isNearTable) { isNearTable = nearTableCheck; updateUI(); }
+  if(shieldGen > 0) { player.shield = Math.min(player.maxShield, player.shield + shieldGen); updateUI(); }
+
+  projectiles.forEach((p, idx) => {
+    p.x += p.vx * delta; p.y += p.vy * delta;
+    p.traveled += Math.hypot(p.vx * delta, p.vy * delta);
+    
+    enemies.forEach((en) => {
+      if(Math.hypot(p.x - en.x, p.y - en.y) < 16) {
+        en.hp -= p.damage;
+        p.traveled = p.range + 99;
+        if(en.hp <= 0 && isHost) {
+          inventory.scrap += 2;
+          updateUI();
+        }
+      }
+    });
+    if(p.traveled >= p.range) projectiles.splice(idx, 1);
+  });
+
+  drawWorld();
+}
+
+function processHostEnemySimulation(delta) {
+  if (!isNight) { enemies = []; return; }
+  let maxAllowed = currentDay * 3 + 3;
+  if (enemies.length < maxAllowed && Math.random() < 0.04) {
+    let ang = Math.random() * Math.PI * 2;
+    let sDist = islandRadius + 200;
+    enemies.push({
+      id: 'en_' + Math.random().toString(36).substr(2, 9),
+      x: Math.cos(ang) * sDist, y: Math.sin(ang) * sDist,
+      hp: 30 + currentDay * 5, speed: 65 + Math.random() * 40
+    });
+  }
+
+  enemies.forEach((en, idx) => {
+    let targets = [{ x: player.x, y: player.y, isPlayer: true }];
+    Object.keys(remotePlayersData).forEach(id => targets.push({ x: remotePlayersData[id].x, y: remotePlayersData[id].y, isPlayer: false }));
+    
+    let nearest = null, minDist = Infinity;
+    targets.forEach(t => {
+      let d = Math.hypot(en.x - t.x, en.y - t.y);
+      if(d < minDist) { minDist = d; nearest = t; }
+    });
+
+    if(nearest) {
+      let ang = Math.atan2(nearest.y - en.y, nearest.x - en.x);
+      en.x += Math.cos(ang) * en.speed * delta;
+      en.y += Math.sin(ang) * en.speed * delta;
+
+      if(minDist < 15) {
+        if(nearest.isPlayer) {
+          if(player.shield > 0) player.shield = Math.max(0, player.shield - 35 * delta);
+          else player.hp -= 20 * delta;
+          updateUI();
+          if(player.hp <= 0) gameOver();
+        }
+      }
+    }
+    if (en.hp <= 0) enemies.splice(idx, 1);
+  });
+}
+
+function drawWorld() {
+  ctx.clearRect(0,0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(canvas.width/2 - player.x, canvas.height/2 - player.y);
+
+  ctx.fillStyle = isNight ? '#041018' : '#0a3644'; 
+  ctx.fillRect(-1000, -1000, 2000, 2000);
+
+  ctx.beginPath();
+  ctx.arc(0, 0, islandRadius, 0, Math.PI * 2);
+  ctx.fillStyle = isNight ? '#142d2a' : '#2b7566'; 
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(243,247,242,0.1)';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  resources.forEach(r => {
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, 6, 0, Math.PI * 2);
+    if(r.type === 'wood') ctx.fillStyle = '#b08d57';
+    else if(r.type === 'coral') ctx.fillStyle = '#ff6b4a';
+    else if(r.type === 'scrap') ctx.fillStyle = '#8fa4ad';
+    else if(r.type === 'iron') ctx.fillStyle = 'var(--iron-gray)';
+    else ctx.fillStyle = 'var(--abyssal-blue)';
+    ctx.fill();
+  });
+
+  structures.forEach(s => {
+    ctx.fillStyle = s.color || '#cccccc';
+    ctx.fillRect(s.x - 10, s.y - 10, 20, 20);
+    ctx.strokeStyle = '#f3f7f2';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(s.x - 10, s.y - 10, 20, 20);
+  });
+
+  enemies.forEach(en => {
+    ctx.fillStyle = 'var(--coral)';
+    ctx.fillRect(en.x - 8, en.y - 8, 16, 16);
+    ctx.fillStyle = 'black'; ctx.fillRect(en.x - 10, en.y - 14, 20, 3);
+    ctx.fillStyle = 'var(--bioglow)'; ctx.fillRect(en.x - 10, en.y - 14, 20 * (en.hp / 30), 3);
+  });
+
+  projectiles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius || 3, 0, Math.PI*2);
+    ctx.fillStyle = p.color || '#ffffff';
+    ctx.fill();
+  });
+
+  Object.keys(remotePlayersData).forEach(id => {
+    let pEntry = remotePlayersData[id];
+    ctx.beginPath(); ctx.arc(pEntry.x, pEntry.y, 8, 0, Math.PI * 2);
+    ctx.fillStyle = pEntry.color || '#ff6b4a'; ctx.fill();
+    ctx.fillStyle = '#f3f7f2'; ctx.font = '11px IBM Plex Mono';
+    ctx.fillText(pEntry.name, pEntry.x - 15, pEntry.y - 14);
+  });
+
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(player.angle);
+  ctx.fillStyle = player.color || 'var(--coral)';
+  ctx.beginPath();
+  ctx.moveTo(12, 0);
+  ctx.lineTo(-8, -8);
+  ctx.lineTo(-4, 0);
+  ctx.lineTo(-8, 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  ctx.restore();
+
+  if(isNight) {
+    ctx.fillStyle = 'rgba(5, 15, 22, 0.45)';
+    ctx.fillRect(0,0, canvas.width, canvas.height);
+  } else {
+    ctx.fillStyle = 'rgba(255, 253, 240, 0.04)';
+    ctx.fillRect(0,0, canvas.width, canvas.height);
+  }
+}
+
+function gameOver() { gameActive = false; document.getElementById('death-days').innerText = currentDay; document.getElementById('death-screen').classList.add('active'); }
+function resetGame() {
+  projectiles = []; structures = []; if(isHost) initResources(); else resources = []; enemies = [];
+  player.x = 0; player.y = 0; player.hp = 100; player.shield = 0; player.oxygen = 100;
+  inventory = { wood: 12, coral: 6, scrap: 0, iron: 0, glow: 0 };
+  craftedWeapons = { spear: false, blaster: false };
+  cycleTime = 0; currentDay = 1; isNight = false; buildIndex = 0;
+  document.getElementById('death-screen').classList.remove('active');
+  document.getElementById('oxygen-container').style.display = 'none';
+  gameActive = true; updateUI(); lastTime = performance.now(); tick2D(lastTime);
+}
+</script>
+</body>
+</html>
