@@ -634,8 +634,9 @@
 
 <script>
   const queryParams = new URLSearchParams(window.location.search);
-  window.ATOLL_SUPABASE_URL = queryParams.get('supabaseUrl') || window.ATOLL_SUPABASE_URL || '';
-  window.ATOLL_SUPABASE_ANON_KEY = queryParams.get('supabaseAnonKey') || window.ATOLL_SUPABASE_ANON_KEY || '';
+  // Your Supabase URL and Anon Key are now fully integrated:
+  window.ATOLL_SUPABASE_URL = queryParams.get('supabaseUrl') || "https://ndjgohctnkpmlawaznjf.supabase.co";
+  window.ATOLL_SUPABASE_ANON_KEY = queryParams.get('supabaseAnonKey') || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kamdvaGN0bmtwbWxhd2F6bmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTY2MzMsImV4cCI6MjA5OTE5MjYzM30.HEdfZcFIFqwDCQ85sUkbeO40uA2PyVvKL8x84LPYunk";
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
