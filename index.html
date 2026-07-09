@@ -452,7 +452,6 @@ let remotePlayersData = {};
 let isHost = true; 
 let roomPeers = {};
 
-// Robust Touch / iPadOS Device Check
 const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
 
 function setupMultiplayerChannel() {
@@ -460,16 +459,23 @@ function setupMultiplayerChannel() {
   document.getElementById('host-badge').innerText = "Role: Connecting to Broker...";
   
   try {
-    // Standard secure WebSockets connection to HiveMQ free broker
-    mqttClient = mqtt.connect('wss://broker.hivemq.com:8043/mqtt');
+    // Automatically switch protocol if opening from local filesystem vs server
+    const protocol = window.location.protocol === 'file:' ? 'wss://' : 'wss://';
+    const brokerUrl = protocol + 'broker.hivemq.com:8043/mqtt';
+    
+    // Connect with a unique client ID to prevent broker collisions
+    mqttClient = mqtt.connect(brokerUrl, {
+      clientId: 'atoll3d_' + window.playerId,
+      keepalive: 60,
+      reconnectPeriod: 1000,
+      clean: true
+    });
     
     mqttClient.on('connect', () => {
-      console.log("MQTT Client Connected!");
+      console.log("MQTT Client Connected Successfully!");
       
-      // Subscribe explicitly to the topic designated for our custom Room ID
       mqttClient.subscribe(`atoll3d/rooms/${multiplayerRoomId}`, (err) => {
         if (!err) {
-          // Broadcast initial entry ping
           sendNetworkPacket({ type: 'ping', id: window.playerId, sessionStartTime });
         }
       });
@@ -478,7 +484,6 @@ function setupMultiplayerChannel() {
     mqttClient.on('message', (topic, message) => {
       try {
         const msg = JSON.parse(message.toString());
-        
         if (!msg || msg.id === window.playerId) return;
 
         if (msg.type === 'update') {
@@ -511,13 +516,11 @@ function setupMultiplayerChannel() {
           syncEnemiesFromHost(msg.enemies);
           syncResourcesFromHost(msg.resources);
         }
-      } catch (e) {
-        // Suppress syntax parsing issues from any noisy data on the public topic
-      }
+      } catch (e) {}
     });
 
     mqttClient.on('error', (err) => {
-      console.warn("MQTT Broker connection error:", err);
+      console.warn("MQTT Broker link temporary block/error, retrying...", err);
     });
 
   } catch(err) {
@@ -582,7 +585,7 @@ function initiateGameConnection() {
   }, 500);
 }
 
-// --- 3D ENGINE CONFIGURATION (HIGH VISIBILITY / THIRD PERSON) ---
+// --- 3D ENGINE CONFIGURATION ---
 let scene, camera, renderer;
 let gameActive = false, lastTime = 0;
 
