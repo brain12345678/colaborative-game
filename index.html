@@ -9,7 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
-  :root{\n    --abyss:#0c1f2d;\n    --tide-navy:#123a3e;\n    --lagoon:#1f5f63;\n    --sand:#e7c989;\n    --coral:#ff6b4a;\n    --bioglow:#6ef2b0;\n    --abyssal-blue:#3a86ff;\n    --iron-gray:#a1a1a6;\n    --foam:#f3f7f2;\n    --foam-dim:rgba(243,247,242,0.15);\n    --depth-panel:rgba(12,31,45,0.85);\n  }\n\n  *{\n    margin:0; padding:0; box-sizing:border-box;\n    font-family:'Inter', sans-serif;\n    user-select:none; -webkit-user-select:none;\n  }\n\n  body, html {\n    background-color: var(--abyss);\n    color: var(--foam);\n    width:100%; height:100%;\n    overflow:hidden;\n  }\n\n  /* LANDING SPLASH LAYOUT */\n  #landing-page {\n    position: fixed; inset:0; z-index:9999;\n    background: radial-gradient(circle at center, var(--tide-navy) 0%, var(--abyss) 100%);\n    display:flex; flex-direction:column; align-items:center; justify-content:center;\n    padding:20px; text-align:center;\n    transition: opacity 0.5s ease;\n  }\n  \n  .splash-logo {\n    font-family: 'Fraunces', serif;\n    font-size: 4rem; font-weight:300; letter-spacing:-0.03em;\n    color: var(--sand); margin-bottom:10px;\n    text-shadow: 0 4px 20px rgba(231,201,137,0.2);\n  }\n\n  .splash-tagline {\n    font-size:1.1rem; color: var(--bioglow);\n    font-family:'IBM Plex Mono', monospace; margin-bottom:40px;\n    text-transform:uppercase; letter-spacing:0.1em;\n  }\n\n  .login-card {\n    background: var(--depth-panel); border: 1px solid var(--lagoon);\n    padding:30px; border-radius:16px; width:100%; max-width:400px;\n    box-shadow: 0 20px 50px rgba(0,0,0,0.5);\n    backdrop-filter: blur(10px);\n  }\n\n  .form-group {\n    margin-bottom:20px; text-align:left;\n  }\n  \n  .form-group label {\n    display:block; font-size:0.8rem; text-transform:uppercase;\n    letter-spacing:0.05em; margin-bottom:8px; color: var(--iron-gray);\n    font-family:'IBM Plex Mono', monospace;\n  }\n\n  .form-group input {\n    width:100%; background: rgba(0,0,0,0.3); border:1px solid var(--lagoon);\n    padding:12px 16px; border-radius:8px; color:var(--foam);\n    font-size:1rem; outline:none; transition: border-color 0.2s;\n  }\n  .form-group input:focus { border-color: var(--bioglow); }\n\n  .connect-btn {\n    width:100%; background: var(--coral); color:var(--foam);\n    border:none; padding:14px; font-size:1.1rem; font-weight:600;\n    border-radius:8px; cursor:pointer; transition: transform 0.1s, background-color 0.2s;\n    box-shadow: 0 4px 15px rgba(255,107,74,0.3);\n  }\n  .connect-btn:hover { background-color: #ff8164; }\n  .connect-btn:active { transform: scale(0.98); }\n\n  /* MAIN HUD MATRIX */\n  #canvas3d {\n    display:none; width:100%; height:100%; background-color:#020a10;\n  }\n\n  #game-ui {\n    display:none; position:fixed; inset:0; pointer-events:none;\n    flex-direction:column; justify-content:space-between; padding:20px;\n    z-index:100;\n  }\n\n  .interactive { pointer-events: auto; }\n\n  .top-hud-bar {\n    display:flex; justify-content:space-between; align-items:flex-start; width:100%;\n  }\n\n  .status-vitals {\n    background: var(--depth-panel); border-left:4px solid var(--bioglow);\n    padding:15px; border-radius: 0 12px 12px 0; width:260px;\n    box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  }\n\n  .vital-row { margin-bottom:10px; }\n  .vital-row:last-child { margin-bottom:0; }\n  .vital-meta { display:flex; justify-content:space-between; font-size:0.75rem; font-family:'IBM Plex Mono', monospace; margin-bottom:4px; color:var(--iron-gray); }\n  .vital-meta span.val { color: var(--foam); font-weight:600; }\n  \n  .bar-container { width:100%; height:8px; background: rgba(243,247,242,0.1); border-radius:4px; overflow:hidden; }\n  .bar-fill { height:100%; width:100%; transition: width 0.2s ease-out; }\n  .bg-hp { background: var(--coral); }\n  .bg-shield { background: var(--abyssal-blue); }\n  .bg-o2 { background: var(--bioglow); }\n\n  .room-banner {\n    background: var(--depth-panel); border:1px solid var(--lagoon);\n    padding:10px 20px; border-radius:30px; font-family:'IBM Plex Mono', monospace;\n    font-size:0.85rem; letter-spacing:0.05em; color:var(--sand);\n    box-shadow: 0 4px 20px rgba(0,0,0,0.3);\n  }\n  \n  #host-badge {\n    font-size:0.7rem; display:block; color:var(--iron-gray); text-align:center; margin-top:2px;\n  }\n\n  .right-inventory {\n    background: var(--depth-panel); padding:15px; border-radius:12px;\n    border:1px solid rgba(243,247,242,0.08); width:180px;\n    box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  }\n  .inv-title {\n    font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:var(--iron-gray);\n    border-bottom:1px solid rgba(243,247,242,0.1); padding-bottom:6px; margin-bottom:8px;\n    text-transform:uppercase; letter-spacing:0.05em;\n  }\n  .inv-grid { display:grid; grid-template-columns: 1fr; gap:6px; }\n  .inv-item { display:flex; justify-content:space-between; font-size:0.85rem; font-family:'IBM Plex Mono', monospace; }\n  .inv-label { color: var(--iron-gray); }\n  .inv-qty { color: var(--sand); font-weight:600; }\n\n  .bottom-matrix-controls {\n    display:flex; justify-content:space-between; align-items:flex-end; width:100%;\n  }\n\n  .radial-crafting {\n    background: var(--depth-panel); padding:15px; border-radius:16px;\n    border:1px solid var(--lagoon); width:320px;\n    box-shadow: 0 15px 40px rgba(0,0,0,0.4);\n  }\n  .craft-header {\n    font-size:0.8rem; font-family:'IBM Plex Mono', monospace; color:var(--bioglow);\n    margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;\n  }\n  .craft-options {\n    display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:10px;\n  }\n  .craft-btn {\n    background: rgba(0,0,0,0.4); border:1px solid var(--lagoon);\n    border-radius:8px; padding:10px 4px; color:var(--foam); cursor:pointer;\n    display:flex; flex-direction:column; align-items:center; transition: all 0.2s;\n  }\n  .craft-btn:hover { background: rgba(31,95,99,0.3); border-color:var(--bioglow); }\n  .craft-btn.active { background: var(--lagoon); border-color:var(--bioglow); box-shadow:0 0 10px rgba(110,242,176,0.2); }\n  .craft-icon { font-size:1.2rem; margin-bottom:2px; }\n  .craft-name { font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.02em; }\n  .craft-cost { font-size:0.6rem; color: var(--iron-gray); font-family:'IBM Plex Mono', monospace; margin-top:1px; }\n\n  #crafting-instructions {\n    font-size:0.65rem; color: var(--sand); font-style:italic; text-align:center;\n  }\n\n  .environment-card {\n    background: var(--depth-panel); padding:12px 20px; border-radius:12px;\n    text-align:right; font-family:'IBM Plex Mono', monospace;\n    box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  }\n  .env-time { font-size:1.1rem; font-weight:600; color: var(--foam); }\n  .env-day { font-size:0.75rem; color: var(--bioglow); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px; }\n\n  /* TOUCH DISPLAY OVERLAYS */\n  #mobile-dpad {\n    display:none; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px);\n    gap:6px; margin-left:10px; margin-bottom:10px;\n  }\n  .dpad-btn {\n    background: rgba(12,31,45,0.75); border:1px solid var(--lagoon); border-radius:10px;\n    color:var(--foam); display:flex; align-items:center; justify-content:center;\n    font-size:1.2rem; font-weight:bold; cursor:pointer;\n  }\n  .dpad-btn:active { background: var(--lagoon); }\n\n  #mobile-actions {\n    display:none; flex-direction:column; gap:10px; margin-right:10px; margin-bottom:10px;\n  }\n  .action-circle {\n    width:65px; height:65px; border-radius:50%; background: rgba(255,107,74,0.85);\n    border:2px solid var(--foam); color:var(--foam); font-weight:bold;\n    display:flex; align-items:center; justify-content:center; font-size:0.9rem;\n    box-shadow:0 6px 20px rgba(0,0,0,0.4); cursor:pointer;\n    text-transform:uppercase;\n  }\n  .action-circle:active { transform:scale(0.95); background: var(--coral); }\n  .action-circle.build-mode { background: rgba(58,134,255,0.85); }\n\n  /* GAME OVER MODAL */\n  #death-screen {\n    position:fixed; inset:0; background:rgba(12,5,5,0.9); z-index:10000;\n    display:none; flex-direction:column; align-items:center; justify-content:center; padding:20px;\n  }\n  #death-screen.active { display:flex; }\n  .death-title { font-family:'Fraunces', serif; font-size:3.5rem; color:var(--coral); margin-bottom:15px; }\n  .death-body { font-size:1.1rem; color:var(--iron-gray); margin-bottom:30px; font-family:'IBM Plex Mono', monospace; }\n  .respawn-btn { background:var(--sand); color:var(--abyss); font-weight:bold; border:none; padding:14px 40px; font-size:1rem; border-radius:8px; cursor:pointer; text-transform:uppercase; letter-spacing:0.05em; }\n  .respawn-btn:hover { background:#f5ddaa; }\n\n  .game-hint {\n    position:fixed; bottom:185px; left:50%; transform:translateX(-50%);\n    background:rgba(0,0,0,0.6); color:var(--iron-gray); font-size:0.75rem;\n    padding:6px 16px; border-radius:20px; white-space:nowrap; pointer-events:none;\n    border:1px solid rgba(243,247,242,0.05);\n  }\n\n  @media(max-width:768px){\n    .top-hud-bar { flex-direction:column; gap:10px; align-items:center; }\n    .status-vitals { width:100%; border-radius:12px; border-left:none; border-top:4px solid var(--bioglow); }\n    .right-inventory { width:100%; display:flex; flex-direction:column; }\n    .inv-grid { grid-template-columns: repeat(3, 1fr); gap:10px; }\n    .bottom-matrix-controls { flex-direction:column-reverse; align-items:center; gap:15px; }\n    .radial-crafting { width:100%; }\n    .environment-card { width:100%; text-align:center; }\n    .game-hint { display:none; }\n  }\n</style>
+  :root{\n    --abyss:#0c1f2d;\n    --tide-navy:#123a3e;\n    --lagoon:#1f5f63;\n    --sand:#e7c989;\n    --coral:#ff6b4a;\n    --bioglow:#6ef2b0;\n    --abyssal-blue:#3a86ff;\n    --iron-gray:#a1a1a6;\n    --foam:#f3f7f2;\n    --foam-dim:rgba(243,247,242,0.15);\n    --depth-panel:rgba(12,31,45,0.85);\n  }\n\n  *{\n    margin:0; padding:0; box-sizing:border-box;\n    font-family:'Inter', sans-serif;\n    user-select:none; -webkit-user-select:none;\n  }\n\n  body, html {\n    background-color: var(--abyss);\n    color: var(--foam);\n    width:100%; height:100%;\n    overflow:hidden;\n  }\n\n  #landing-page {\n    position: fixed; inset:0; z-index:9999;\n    background: radial-gradient(circle at center, var(--tide-navy) 0%, var(--abyss) 100%);\n    display:flex; flex-direction:column; align-items:center; justify-content:center;\n    padding:20px; text-align:center;\n    transition: opacity 0.5s ease;\n  }\n  \n  .splash-logo {\n    font-family: 'Fraunces', serif;\n    font-size: 4rem; font-weight:300; letter-spacing:-0.03em;\n    color: var(--sand); margin-bottom:10px;\n    text-shadow: 0 4px 20px rgba(231,201,137,0.2);\n  }\n\n  .splash-tagline {\n    font-size:1.1rem; color: var(--bioglow);\n    font-family:'IBM Plex Mono', monospace; margin-bottom:40px;\n    text-transform:uppercase; letter-spacing:0.1em;\n  }\n\n  .login-card {\n    background: var(--depth-panel); border: 1px solid var(--lagoon);\n    padding:30px; border-radius:16px; width:100%; max-width:400px;\n    box-shadow: 0 20px 50px rgba(0,0,0,0.5);\n    backdrop-filter: blur(10px);\n  }\n\n  .form-group {\n    margin-bottom:20px; text-align:left;\n  }\n  \n  .form-group label {\n    display:block; font-size:0.8rem; text-transform:uppercase;\n    letter-spacing:0.05em; margin-bottom:8px; color: var(--iron-gray);\n    font-family:'IBM Plex Mono', monospace;\n  }\n\n  .form-group input {\n    width:100%; background: rgba(0,0,0,0.3); border:1px solid var(--lagoon);\n    padding:12px 16px; border-radius:8px; color:var(--foam);\n    font-size:1rem; outline:none; transition: border-color 0.2s;\n  }\n  .form-group input:focus { border-color: var(--bioglow); }\n\n  .connect-btn {\n    width:100%; background: var(--coral); color:var(--foam);\n    border:none; padding:14px; font-size:1.1rem; font-weight:600;\n    border-radius:8px; cursor:pointer; transition: transform 0.1s, background-color 0.2s;\n    box-shadow: 0 4px 15px rgba(255,107,74,0.3);\n  }\n  .connect-btn:hover { background-color: #ff8164; }\n  .connect-btn:active { transform: scale(0.98); }\n\n  #canvas3d {\n    display:none; width:100%; height:100%; background-color:#020a10;\n  }\n\n  #game-ui {\n    display:none; position:fixed; inset:0; pointer-events:none;\n    flex-direction:column; justify-content:space-between; padding:20px;\n    z-index:100;\n  }\n\n  .interactive { pointer-events: auto; }\n\n  .top-hud-bar {\n    display:flex; justify-content:space-between; align-items:flex-start; width:100%;\n  }\n\n  .status-vitals {\n    background: var(--depth-panel); border-left:4px solid var(--bioglow);\n    padding:15px; border-radius: 0 12px 12px 0; width:260px;\n    box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  }\n\n  .vital-row { margin-bottom:10px; }\n  .vital-row:last-child { margin-bottom:0; }\n  .vital-meta { display:flex; justify-content:space-between; font-size:0.75rem; font-family:'IBM Plex Mono', monospace; margin-bottom:4px; color:var(--iron-gray); }\n  .vital-meta span.val { color: var(--foam); font-weight:600; }\n  \n  .bar-container { width:100%; height:8px; background: rgba(243,247,242,0.1); border-radius:4px; overflow:hidden; }\n  .bar-fill { height:100%; width:100%; transition: width 0.2s ease-out; }\n  .bg-hp { background: var(--coral); }\n  .bg-shield { background: var(--abyssal-blue); }\n  .bg-o2 { background: var(--bioglow); }\n\n  .room-banner {\n    background: var(--depth-panel); border:1px solid var(--lagoon);\n    padding:10px 20px; border-radius:30px; font-family:'IBM Plex Mono', monospace;\n    font-size:0.85rem; letter-spacing:0.05em; color:var(--sand);\n    box-shadow: 0 4px 20px rgba(0,0,0,0.3);\n  }\n  \n  #host-badge {\n    font-size:0.7rem; display:block; color:var(--iron-gray); text-align:center; margin-top:2px;\n  }\n\n  .right-inventory {\n    background: var(--depth-panel); padding:15px; border-radius:12px;\n    border:1px solid rgba(243,247,242,0.08); width:200px;\n    box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  }\n  .inv-title {\n    font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:var(--iron-gray);\n    border-bottom:1px solid rgba(243,247,242,0.1); padding-bottom:6px; margin-bottom:8px;\n    text-transform:uppercase; letter-spacing:0.05em;\n  }\n  .inv-grid { display:grid; grid-template-columns: 1fr; gap:6px; }\n  .inv-item { display:flex; justify-content:space-between; font-size:0.85rem; font-family:'IBM Plex Mono', monospace; }\n  .inv-label { color: var(--iron-gray); }\n  .inv-qty { color: var(--sand); font-weight:600; }\n\n  .bottom-matrix-controls {\n    display:flex; justify-content:space-between; align-items:flex-end; width:100%;\n  }\n\n  .radial-crafting {\n    background: var(--depth-panel); padding:15px; border-radius:16px;\n    border:1px solid var(--lagoon); width:460px;\n    box-shadow: 0 15px 40px rgba(0,0,0,0.4);\n  }\n  .craft-header {\n    font-size:0.8rem; font-family:'IBM Plex Mono', monospace; color:var(--bioglow);\n    margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;\n  }\n  .craft-options {\n    display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; margin-bottom:10px;\n  }\n  .craft-btn {\n    background: rgba(0,0,0,0.4); border:1px solid var(--lagoon);\n    border-radius:8px; padding:10px 2px; color:var(--foam); cursor:pointer;\n    display:flex; flex-direction:column; align-items:center; transition: all 0.2s;\n  }\n  .craft-btn:hover { background: rgba(31,95,99,0.3); border-color:var(--bioglow); }\n  .craft-btn.active { background: var(--lagoon); border-color:var(--bioglow); box-shadow:0 0 10px rgba(110,242,176,0.2); }\n  .craft-icon { font-size:1.2rem; margin-bottom:2px; }\n  .craft-name { font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.02em; text-align:center; }\n  .craft-cost { font-size:0.58rem; color: var(--iron-gray); font-family:'IBM Plex Mono', monospace; margin-top:2px; text-align:center; }\n\n  #crafting-instructions {\n    font-size:0.65rem; color: var(--sand); font-style:italic; text-align:center;\n  }\n\n  .environment-card {\n    background: var(--depth-panel); padding:12px 20px; border-radius:12px;\n    text-align:right; font-family:'IBM Plex Mono', monospace;\n    box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  }\n  .env-time { font-size:1.1rem; font-weight:600; color: var(--foam); }\n  .env-day { font-size:0.75rem; color: var(--bioglow); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px; }\n\n  #mobile-dpad {\n    display:none; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px);\n    gap:6px; margin-left:10px; margin-bottom:10px;\n  }\n  .dpad-btn {\n    background: rgba(12,31,45,0.75); border:1px solid var(--lagoon); border-radius:10px;\n    color:var(--foam); display:flex; align-items:center; justify-content:center;\n    font-size:1.2rem; font-weight:bold; cursor:pointer;\n  }\n  .dpad-btn:active { background: var(--lagoon); }\n\n  #mobile-actions {\n    display:none; flex-direction:column; gap:10px; margin-right:10px; margin-bottom:10px;\n  }\n  .action-circle {\n    width:65px; height:65px; border-radius:50%; background: rgba(255,107,74,0.85);\n    border:2px solid var(--foam); color:var(--foam); font-weight:bold;\n    display:flex; align-items:center; justify-content:center; font-size:0.9rem;\n    box-shadow:0 6px 20px rgba(0,0,0,0.4); cursor:pointer;\n    text-transform:uppercase;\n  }\n  .action-circle:active { transform:scale(0.95); background: var(--coral); }\n  .action-circle.build-mode { background: rgba(58,134,255,0.85); }\n\n  #death-screen {\n    position:fixed; inset:0; background:rgba(12,5,5,0.9); z-index:10000;\n    display:none; flex-direction:column; align-items:center; justify-content:center; padding:20px;\n  }\n  #death-screen.active { display:flex; }\n  .death-title { font-family:'Fraunces', serif; font-size:3.5rem; color:var(--coral); margin-bottom:15px; }\n  .death-body { font-size:1.1rem; color:var(--iron-gray); margin-bottom:30px; font-family:'IBM Plex Mono', monospace; }\n  .respawn-btn { background:var(--sand); color:var(--abyss); font-weight:bold; border:none; padding:14px 40px; font-size:1rem; border-radius:8px; cursor:pointer; text-transform:uppercase; letter-spacing:0.05em;\n  }\n  .respawn-btn:hover { background:#f5ddaa; }\n\n  #controls-notice {\n    position:fixed; bottom:185px; left:50%; transform:translateX(-50%);\n    background:rgba(0,0,0,0.6); color:var(--iron-gray); font-size:0.75rem;\n    padding:6px 16px; border-radius:20px; white-space:nowrap; pointer-events:none;\n    border:1px solid rgba(243,247,242,0.05); text-align:center;\n  }\n\n  @media(max-width:992px){\n    .radial-crafting { width:100%; }\n    .craft-options { grid-template-columns: repeat(3, 1fr); }\n  }\n\n  @media(max-width:768px){\n    .top-hud-bar { flex-direction:column; gap:10px; align-items:center; }\n    .status-vitals { width:100%; border-radius:12px; border-left:none; border-top:4px solid var(--bioglow); }\n    .right-inventory { width:100%; display:flex; flex-direction:column; }\n    .inv-grid { grid-template-columns: repeat(5, 1fr); gap:6px; }\n    .bottom-matrix-controls { flex-direction:column-reverse; align-items:center; gap:15px; }\n    .radial-crafting { width:100%; }\n    .environment-card { width:100%; text-align:center; }\n    #controls-notice { display:none; }\n  }\n</style>
 </head>
 <body>
 
@@ -63,9 +63,11 @@
     <div class="right-inventory">
       <div class="inv-title">Cargo Matrix</div>
       <div class="inv-grid">
-        <div class="inv-item"><span class="inv-label">Wood / Kelp</span><span id="inv-wood" class="inv-qty">0</span></div>
-        <div class="inv-item"><span class="inv-label">Coral Ore</span><span id="inv-coral" class="inv-qty">0</span></div>
-        <div class="inv-item"><span class="inv-label">Metal Scrap</span><span id="inv-scrap" class="inv-qty">0</span></div>
+        <div class="inv-item"><span class="inv-label">Wood</span><span id="inv-wood" class="inv-qty">0</span></div>
+        <div class="inv-item"><span class="inv-label">Coral</span><span id="inv-coral" class="inv-qty">0</span></div>
+        <div class="inv-item"><span class="inv-label">Scrap</span><span id="inv-scrap" class="inv-qty">0</span></div>
+        <div class="inv-item"><span class="inv-label">Iron</span><span id="inv-iron" class="inv-qty">0</span></div>
+        <div class="inv-item"><span class="inv-label">Glow</span><span id="inv-glow" class="inv-qty">0</span></div>
       </div>
     </div>
   </div>
@@ -89,6 +91,12 @@
         <div class="craft-btn" id="btn-sch-table" onclick="selectSchematic('crafting_table')">
           <span class="craft-icon">🔋</span><span class="craft-name">Pylon Lab</span><span class="craft-cost">8 Wd, 4 Crl</span>
         </div>
+        <div class="craft-btn" id="btn-sch-spear" onclick="selectSchematic('spear')">
+          <span class="craft-icon">🔱</span><span class="craft-name">Shock Spear</span><span class="craft-cost">6 Wd, 4 Scr</span>
+        </div>
+        <div class="craft-btn" id="btn-sch-blaster" onclick="selectSchematic('blaster')">
+          <span class="craft-icon">💥</span><span class="craft-name">Ion Blaster</span><span class="craft-cost">10 Scr, 2 Irn</span>
+        </div>
       </div>
       <div id="crafting-instructions">Observe Mode: Click / Tap anywhere on the island mesh to travel safely.</div>
     </div>
@@ -104,7 +112,7 @@
     </div>
   </div>
 
-  <div class="game-hint">Click or tap the island to walk. Walk over resources to gather. Arrow keys / WASD also work. Wall up before dark.</div>
+  <div id="controls-notice">Click or tap the island to walk. Walk over resources to gather. Left-Click to attack with crafted tools. Wall up before dark.</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -276,7 +284,8 @@ function initiateGameConnection() {
 let scene, camera, renderer;
 let gameActive = false, lastTime = 0;
 
-let inventory = { wood: 12, coral: 6, scrap: 0 };
+let inventory = { wood: 12, coral: 6, scrap: 0, iron: 0, glow: 0 };
+let craftedWeapons = { spear: false, blaster: false };
 let currentSchematic = 'none'; 
 
 let player = {
@@ -296,7 +305,7 @@ let resources = [];
 let enemies = [];    
 let projectiles = []; 
 
-let cycleTime = 240; 
+let cycleTime = 40; 
 let isNight = false;
 let currentDay = 1;
 let directionalLight, ambientLight;
@@ -399,7 +408,7 @@ function initResources() {
   resources.forEach(r => { if(r.mesh) scene.remove(r.mesh); });
   resources = [];
   
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < 20; i++) {
     spawnResource('wood');
     spawnResource('coral');
   }
@@ -416,10 +425,18 @@ function spawnResource(type) {
     geo = new THREE.ConeGeometry(0.7, 4, 5);
     mat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.8 });
     height = 2;
-  } else {
+  } else if (type === 'coral') {
     geo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
     mat = new THREE.MeshStandardMaterial({ color: 0xff8a65, roughness: 0.6 });
     height = 0.6;
+  } else if (type === 'iron') {
+    geo = new THREE.SphereGeometry(0.6, 6, 6);
+    mat = new THREE.MeshStandardMaterial({ color: 0x78909c, metalness: 0.9, roughness: 0.2 });
+    height = 0.5;
+  } else {
+    geo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 5);
+    mat = new THREE.MeshBasicMaterial({ color: 0x6ef2b0 });
+    height = 0.4;
   }
 
   const mesh = new THREE.Mesh(geo, mat);
@@ -450,10 +467,18 @@ function syncResourcesFromHost(hostResources) {
         geo = new THREE.ConeGeometry(0.7, 4, 5);
         mat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.8 });
         height = 2;
-      } else {
+      } else if (hr.type === 'coral') {
         geo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
         mat = new THREE.MeshStandardMaterial({ color: 0xff8a65, roughness: 0.6 });
         height = 0.6;
+      } else if (hr.type === 'iron') {
+        geo = new THREE.SphereGeometry(0.6, 6, 6);
+        mat = new THREE.MeshStandardMaterial({ color: 0x78909c, metalness: 0.9, roughness: 0.2 });
+        height = 0.5;
+      } else {
+        geo = new THREE.CylinderGeometry(0.4, 0.4, 0.8, 5);
+        mat = new THREE.MeshBasicMaterial({ color: 0x6ef2b0 });
+        height = 0.4;
       }
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(hr.x, height, hr.z);
@@ -558,7 +583,6 @@ function setupInputHandlers() {
   window.addEventListener('mouseup', () => isDraggingCamera = false);
   canvasElement.addEventListener('contextmenu', e => e.preventDefault());
 
-  // Touch Support
   canvasElement.addEventListener('touchstart', e => {
     if (e.touches.length === 1) {
       const touch = e.touches[0];
@@ -578,11 +602,15 @@ function handleIslandInteraction(clientX, clientY) {
   
   const intersects = raycaster.intersectObjects(scene.children, true);
   for (let hit of intersects) {
-    if (hit.object.geometry && hit.object.geometry.type === "CylinderGeometry" && hit.point.y > -0.5) {
-      if (currentSchematic === 'none') {
-        player.targetX = hit.point.x;
-        player.targetZ = hit.point.z;
-        player.isMovingToTarget = true;
+    if (hit.point.y > -0.5) {
+      if (['none', 'spear', 'blaster'].includes(currentSchematic)) {
+        if (currentSchematic !== 'none') {
+          executeCombatAttack(hit.point.x, hit.point.z);
+        } else {
+          player.targetX = hit.point.x;
+          player.targetZ = hit.point.z;
+          player.isMovingToTarget = true;
+        }
       } else {
         executeStructureBuild(hit.point.x, hit.point.z);
       }
@@ -592,6 +620,17 @@ function handleIslandInteraction(clientX, clientY) {
 }
 
 function selectSchematic(type) {
+  if (type === 'spear' && !craftedWeapons.spear) {
+    if (inventory.wood >= 6 && inventory.scrap >= 4) {
+      inventory.wood -= 6; inventory.scrap -= 4; craftedWeapons.spear = true; updateUI();
+    } else { alert("Insufficient assets to assemble tool!"); return; }
+  }
+  if (type === 'blaster' && !craftedWeapons.blaster) {
+    if (inventory.scrap >= 10 && inventory.iron >= 2) {
+      inventory.scrap -= 10; inventory.iron -= 2; craftedWeapons.blaster = true; updateUI();
+    } else { alert("Insufficient assets to build matrix armament!"); return; }
+  }
+
   currentSchematic = type;
   document.querySelectorAll('.craft-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-sch-' + type).classList.add('active');
@@ -599,7 +638,9 @@ function selectSchematic(type) {
   const inst = document.getElementById('crafting-instructions');
   if (type === 'none') inst.innerText = "Observe Mode: Click / Tap anywhere on the island mesh to travel safely.";
   if (type === 'wall') inst.innerText = "Fabricate Mode: Click anywhere on the island map grid to position an Alloy Wall.";
-  if (type === 'crafting_table') inst.innerText = "Fabricate Mode: Click anywhere on the island map grid to position a Pylon Lab.";
+  if (type === 'table') inst.innerText = "Fabricate Mode: Click anywhere on the island map grid to position a Pylon Lab.";
+  if (type === 'spear') inst.innerText = "Shock Spear Armed: Left-Click near an active enemy entity to strike.";
+  if (type === 'blaster') inst.innerText = "Ion Blaster Engaged: Left-Click anywhere to discharge long-range energy projectiles.";
 }
 
 function executeStructureBuild(bx, bz) {
@@ -637,6 +678,36 @@ function executeStructureBuild(bx, bz) {
   }
 }
 
+function executeCombatAttack(tx, tz) {
+  let angle = Math.atan2(tx - player.x, tz - player.z);
+  player.mesh.rotation.y = angle;
+
+  if (currentSchematic === 'spear') {
+    enemies.forEach((en, idx) => {
+      if (Math.hypot(en.x - player.x, en.z - player.z) < 5.0) {
+        en.hp -= 25;
+        if (en.hp <= 0) {
+          if (en.mesh) scene.remove(en.mesh);
+          enemies.splice(idx, 1);
+          inventory.scrap += 3; if(Math.random() < 0.4) inventory.iron += 1; updateUI();
+        }
+      }
+    });
+  } else if (currentSchematic === 'blaster') {
+    const geo = new THREE.SphereGeometry(0.25, 4, 4);
+    const mat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+    const pMesh = new THREE.Mesh(geo, mat);
+    pMesh.position.set(player.x, 1.5, player.z);
+    scene.add(pMesh);
+
+    projectiles.push({
+      x: player.x, z: player.z,
+      vx: Math.sin(angle) * 45, vz: Math.cos(angle) * 45,
+      traveled: 0, mesh: pMesh
+    });
+  }
+}
+
 // --- CORE GAME ENGINE LOOP ---
 function gameLoop(timestamp) {
   if (!gameActive) return;
@@ -650,7 +721,7 @@ function gameLoop(timestamp) {
 
   if (isHost) {
     processEnemySimulation(delta);
-    if (Math.random() < 0.004) spawnHostResourceDistribution();
+    if (Math.random() < 0.003) spawnHostResourceDistribution();
     if (Math.random() < 0.01) broadcastWorldState();
   }
 
@@ -662,13 +733,14 @@ function gameLoop(timestamp) {
 }
 
 function updateEnvironmentClock(delta) {
-  cycleTime += delta * 2; 
+  cycleTime += delta * 2.5; 
   if (cycleTime >= 240) {
     cycleTime = 0;
     currentDay++;
     if (isHost) {
-      for (let i=0; i<10; i++) spawnResource('wood');
-      for (let i=0; i<5; i++) spawnResource('coral');
+      for (let i=0; i<8; i++) spawnResource('wood');
+      for (let i=0; i<4; i++) spawnResource('coral');
+      if (currentDay > 2) { for(let i=0; i<2; i++) spawnResource('iron'); spawnResource('glow'); }
     }
   }
 
@@ -734,7 +806,7 @@ function processPlayerMovement(delta) {
 
   resources.forEach((res, idx) => {
     if (Math.hypot(player.x - res.x, player.z - res.z) < 3.2) {
-      inventory[res.type] = (inventory[res.type] || 0) + 2;
+      inventory[res.type] = (inventory[res.type] || 0) + (res.type==='iron'||res.type==='glow'?1:2);
       
       sendNetworkPacket({ type: 'leave', id: res.id }); 
       
@@ -749,7 +821,7 @@ function processPlayerMovement(delta) {
 }
 
 function processEnemySimulation(delta) {
-  if (isNight && enemies.length < currentDay * 3 + 2) {
+  if (isNight && enemies.length < currentDay * 3 + 1) {
     let spawnAngle = Math.random() * Math.PI * 2;
     let ex = Math.cos(spawnAngle) * (ISLAND_RADIUS - 2);
     let ez = Math.sin(spawnAngle) * (ISLAND_RADIUS - 2);
@@ -763,7 +835,7 @@ function processEnemySimulation(delta) {
 
     enemies.push({
       id: 'en_' + Math.random().toString(36).substr(2, 9),
-      x: ex, z: ez, hp: 40, mesh
+      x: ex, z: ez, hp: 30 + currentDay*10, mesh
     });
   }
 
@@ -779,8 +851,8 @@ function processEnemySimulation(delta) {
     let edx = tx - en.x;
     let edz = tz - en.z;
     if (minDist > 1.0) {
-      en.x += (edx / minDist) * 5.0 * delta;
-      en.z += (edz / minDist) * 5.0 * delta;
+      en.x += (edx / minDist) * (5.0 + currentDay*0.5) * delta;
+      en.z += (edz / minDist) * (5.0 + currentDay*0.5) * delta;
       if (en.mesh) en.mesh.position.set(en.x, 1.0, en.z);
     }
 
@@ -796,8 +868,13 @@ function processEnemySimulation(delta) {
 }
 
 function spawnHostResourceDistribution() {
-  if (resources.length < 60) {
-    spawnResource(Math.random() < 0.6 ? 'wood' : 'coral');
+  if (resources.length < 50) {
+    let r = Math.random();
+    let t = 'wood';
+    if(r>0.5 && r<=0.85) t='coral';
+    else if(r>0.85 && r<=0.95) t='iron';
+    else if(r>0.95) t='glow';
+    spawnResource(t);
   }
 }
 
@@ -807,18 +884,17 @@ function processProjectiles(delta) {
     p.traveled += Math.hypot(p.vx * delta, p.vz * delta);
     if (p.mesh) p.mesh.position.set(p.x, 1.5, p.z);
 
-    if (isHost) {
-      enemies.forEach(en => {
-        if (Math.hypot(p.x - en.x, p.z - en.z) < 2.5) {
-          en.hp -= 20;
-          p.traveled = 999; 
-          if (en.hp <= 0) {
-            inventory.scrap += 3;
-            updateUI();
-          }
+    enemies.forEach((en, eIdx) => {
+      if (Math.hypot(p.x - en.x, p.z - en.z) < 2.5) {
+        en.hp -= 15;
+        p.traveled = 999; 
+        if (en.hp <= 0) {
+          if (en.mesh) scene.remove(en.mesh);
+          enemies.splice(eIdx, 1);
+          inventory.scrap += 3; updateUI();
         }
-      });
-    }
+      }
+    });
 
     if (p.traveled > 40) {
       if (p.mesh) scene.remove(p.mesh);
@@ -848,6 +924,8 @@ function updateUI() {
   document.getElementById('inv-wood').innerText = inventory.wood;
   document.getElementById('inv-coral').innerText = inventory.coral;
   document.getElementById('inv-scrap').innerText = inventory.scrap;
+  document.getElementById('inv-iron').innerText = inventory.iron;
+  document.getElementById('inv-glow').innerText = inventory.glow;
 }
 
 function gameOver() { 
@@ -867,7 +945,8 @@ function resetGame() {
   
   player.x = 0; player.z = 0; player.hp = 100; player.shield = 0; player.oxygen = 100;
   player.camAngle = 0; player.camPitch = 0.5;
-  inventory = { wood: 12, coral: 6, scrap: 0 };
+  inventory = { wood: 12, coral: 6, scrap: 0, iron: 0, glow: 0 };
+  craftedWeapons = { spear: false, blaster: false };
   cycleTime = 40; isNight = false; currentDay = 1;
   
   selectSchematic('none');
