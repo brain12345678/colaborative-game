@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
 
 <style>
   :root{
@@ -440,120 +441,93 @@
 </div>
 
 <script>
-// --- INTERNET MULTIPLAYER LAYER CORE ---
+// --- INTERNET MULTIPLAYER LAYER CORE (MQTT) ---
 let multiplayerRoomId = 'atoll-solo';
 let chosenName = 'Mariner';
 window.playerId = 'p_' + Math.random().toString(36).substr(2, 9);
 const sessionStartTime = Date.now();
 
-let wsConnection;
+let mqttClient;
 let remotePlayersData = {}; 
 let isHost = true; 
 let roomPeers = {};
-
-// Public pool of WebSockets to distribute internet packets across devices
-const PUBLIC_RELAYS = [
-  "wss://relay.damus.io",
-  "wss://nos.lol",
-  "wss://relay.nostr.band"
-];
-let activeRelayUrl = PUBLIC_RELAYS[Math.floor(Math.random() * PUBLIC_RELAYS.length)];
 
 // Robust Touch / iPadOS Device Check
 const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
 
 function setupMultiplayerChannel() {
-  console.log("Connecting to internet relay:", activeRelayUrl);
-  document.getElementById('host-badge').innerText = "Role: Connecting to Relay...";
+  console.log("Connecting to public MQTT broker...");
+  document.getElementById('host-badge').innerText = "Role: Connecting to Broker...";
   
   try {
-    wsConnection = new WebSocket(activeRelayUrl);
+    // Standard secure WebSockets connection to HiveMQ free broker
+    mqttClient = mqtt.connect('wss://broker.hivemq.com:8043/mqtt');
     
-    wsConnection.onopen = () => {
-      // Subscribe explicitly to kind 42 events matching our unique Room ID
-      const subscriptionRequest = ["REQ", "sub_" + window.playerId, {
-        "kinds": [42],
-        "#g": [multiplayerRoomId]
-      }];
-      wsConnection.send(JSON.stringify(subscriptionRequest));
+    mqttClient.on('connect', () => {
+      console.log("MQTT Client Connected!");
       
-      // Broadcast initial entry ping
-      sendNetworkPacket({ type: 'ping', id: window.playerId, sessionStartTime });
-    };
+      // Subscribe explicitly to the topic designated for our custom Room ID
+      mqttClient.subscribe(`atoll3d/rooms/${multiplayerRoomId}`, (err) => {
+        if (!err) {
+          // Broadcast initial entry ping
+          sendNetworkPacket({ type: 'ping', id: window.playerId, sessionStartTime });
+        }
+      });
+    });
 
-    wsConnection.onmessage = (event) => {
+    mqttClient.on('message', (topic, message) => {
       try {
-        const rawData = JSON.parse(event.data);
-        // Nostr Envelope verification: ["EVENT", subscriptionId, eventObject]
-        if (rawData[0] === "EVENT" && rawData[2] && rawData[2].content) {
-          const msg = JSON.parse(rawData[2].content);
-          
-          if (!msg || msg.id === window.playerId) return;
+        const msg = JSON.parse(message.toString());
+        
+        if (!msg || msg.id === window.playerId) return;
 
-          if (msg.type === 'update') {
-            remotePlayersData[msg.id] = { x: msg.x, z: msg.z, angle: msg.angle, color: msg.color, name: msg.name, lastSeen: Date.now() };
-            roomPeers[msg.id] = msg.sessionStartTime;
+        if (msg.type === 'update') {
+          remotePlayersData[msg.id] = { x: msg.x, z: msg.z, angle: msg.angle, color: msg.color, name: msg.name, lastSeen: Date.now() };
+          roomPeers[msg.id] = msg.sessionStartTime;
+          determineHostRole();
+          updateRemotePlayerMesh(msg.id, msg.x, msg.z, msg.angle, msg.color, msg.name);
+        } 
+        else if (msg.type === 'leave') {
+          const resIdx = resources.findIndex(r => r.id === msg.id);
+          if (resIdx !== -1) {
+            if (resources[resIdx].mesh) scene.remove(resources[resIdx].mesh);
+            resources.splice(resIdx, 1);
+          } else {
+            removeRemotePlayerMesh(msg.id);
+            delete remotePlayersData[msg.id];
+            delete roomPeers[msg.id];
             determineHostRole();
-            updateRemotePlayerMesh(msg.id, msg.x, msg.z, msg.angle, msg.color, msg.name);
-          } 
-          else if (msg.type === 'leave') {
-            // Check if it's a player leaving or a resource picked up by someone else
-            const resIdx = resources.findIndex(r => r.id === msg.id);
-            if (resIdx !== -1) {
-              if (resources[resIdx].mesh) scene.remove(resources[resIdx].mesh);
-              resources.splice(resIdx, 1);
-            } else {
-              removeRemotePlayerMesh(msg.id);
-              delete remotePlayersData[msg.id];
-              delete roomPeers[msg.id];
-              determineHostRole();
-            }
-          } 
-          else if (msg.type === 'ping') {
-            roomPeers[msg.id] = msg.sessionStartTime;
-            determineHostRole();
-            broadcastLocalState();
           }
-          else if (msg.type === 'worldSync' && !isHost) {
-            cycleTime = msg.cycleTime;
-            isNight = msg.isNight;
-            currentDay = msg.currentDay;
-            syncEnemiesFromHost(msg.enemies);
-            syncResourcesFromHost(msg.resources);
-          }
+        } 
+        else if (msg.type === 'ping') {
+          roomPeers[msg.id] = msg.sessionStartTime;
+          determineHostRole();
+          broadcastLocalState();
+        }
+        else if (msg.type === 'worldSync' && !isHost) {
+          cycleTime = msg.cycleTime;
+          isNight = msg.isNight;
+          currentDay = msg.currentDay;
+          syncEnemiesFromHost(msg.enemies);
+          syncResourcesFromHost(msg.resources);
         }
       } catch (e) {
-        // Skip parsing errors from miscellaneous payload data on the public server
+        // Suppress syntax parsing issues from any noisy data on the public topic
       }
-    };
+    });
 
-    wsConnection.onerror = () => {
-      console.warn("Relay error, attempting fallback setup...");
-    };
-    
-    wsConnection.onclose = () => {
-      // Automatic reconnection management if connection drops out
-      setTimeout(setupMultiplayerChannel, 5000);
-    };
+    mqttClient.on('error', (err) => {
+      console.warn("MQTT Broker connection error:", err);
+    });
 
   } catch(err) {
-    console.error("WebSocket structural initialization failure", err);
+    console.error("MQTT structural initialization failure", err);
   }
 }
 
 function sendNetworkPacket(payload) {
-  if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) return;
-  
-  // Create standardized ephemeral relay frame payload
-  const event = {
-    "kind": 42,
-    "created_at": Math.floor(Date.now() / 1000),
-    "tags": [["g", multiplayerRoomId]],
-    "content": JSON.stringify(payload),
-    "pubkey": "0000000000000000000000000000000000000000000000000000000000000000",
-    "id": "atoll_" + Math.random().toString(36).substr(2, 9)
-  };
-  wsConnection.send(JSON.stringify(["EVENT", event]));
+  if (!mqttClient || !mqttClient.connected) return;
+  mqttClient.publish(`atoll3d/rooms/${multiplayerRoomId}`, JSON.stringify(payload));
 }
 
 function determineHostRole() {
@@ -596,7 +570,6 @@ function initiateGameConnection() {
     document.getElementById('canvas3d').style.display = 'block';
     document.getElementById('game-ui').style.display = 'flex';
     
-    // UI Layout adaptations if playing via Touch Interface / iPad
     if (isTouchDevice) {
       document.getElementById('mobile-dpad').style.display = 'grid';
       document.getElementById('mobile-actions').style.display = 'flex';
@@ -742,7 +715,7 @@ function setupThirdPersonControls() {
   });
   
   window.addEventListener('click', (e) => {
-    if(isTouchDevice) return; // Managed separately via touch taps to avoid double triggers
+    if(isTouchDevice) return; 
     firePlayerProjectile();
   });
 }
@@ -773,14 +746,11 @@ function firePlayerProjectile() {
   });
 }
 
-// --- SPECIFIC MOBILE/TOUCH BINDINGS FOR CAMERA & HUD ---
 function setupMobileTouchEvents() {
   if(!isTouchDevice) return;
 
-  // Orbit camera drag mapping for touches
   window.addEventListener('touchstart', (e) => {
     if(!gameActive) return;
-    // Don't interrupt interactions targets belonging to the mobile control pads
     if(e.target.closest('#mobile-dpad') || e.target.closest('#mobile-actions') || e.target.closest('.recipe-card')) return;
 
     let touch = e.touches[0];
@@ -788,7 +758,6 @@ function setupMobileTouchEvents() {
     prevMouseX = touch.clientX;
     prevMouseY = touch.clientY;
 
-    // Multi-touch tracking: If a second finger touches while orbiting, fire weapon
     if (e.touches.length > 1) {
       firePlayerProjectile();
     }
@@ -811,7 +780,6 @@ function setupMobileTouchEvents() {
     if(e.touches.length === 0) isDraggingCamera = false;
   });
 
-  // Attach touch input routing for visible virtual HUD elements
   const configureMobileBtn = (id, property) => {
     const element = document.getElementById(id);
     element.addEventListener('touchstart', (e) => { e.preventDefault(); input[property] = true; });
