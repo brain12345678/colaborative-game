@@ -446,7 +446,7 @@ let chosenName = 'Mariner';
 window.playerId = 'p_' + Math.random().toString(36).substr(2, 9);
 const sessionStartTime = Date.now();
 
-let networkChannel;
+let networkChannel = null;
 let remotePlayersData = {}; 
 let isHost = true; 
 let roomPeers = {};
@@ -488,9 +488,9 @@ function setupMultiplayerChannel() {
     };
     networkChannel.postMessage({ type: 'ping', id: window.playerId, sessionStartTime });
   } catch (error) {
-    console.warn("Multiplayer channel blocked by environment sandbox. Falling back to Solo Mode.", error);
+    console.warn("Multiplayer configuration failed due to environment security sandbox restrictions. Falling back gracefully to Local Sandbox Mode.", error);
     networkChannel = null;
-    isHost = true; // Force host role to simulate local world independently
+    isHost = true; 
     if (document.getElementById('host-badge')) {
       document.getElementById('host-badge').innerText = "Role: Solo Mode (Sandbox)";
     }
@@ -508,7 +508,7 @@ function determineHostRole() {
 }
 
 function broadcastLocalState() {
-  if (!networkChannel) return; // Guard against missing channel
+  if (!networkChannel) return;
   try {
     networkChannel.postMessage({
       type: 'update', id: window.playerId, sessionStartTime,
@@ -518,7 +518,7 @@ function broadcastLocalState() {
 }
 
 function broadcastWorldState() {
-  if (!networkChannel || !isHost) return; // Guard against missing channel
+  if (!networkChannel || !isHost) return;
   try {
     networkChannel.postMessage({
       type: 'worldSync', id: window.playerId,
@@ -541,7 +541,6 @@ function initiateGameConnection() {
     document.getElementById('canvas3d').style.display = 'block';
     document.getElementById('game-ui').style.display = 'flex';
     
-    // UI Layout adaptations if playing via Touch Interface / iPad
     if (isTouchDevice) {
       document.getElementById('mobile-dpad').style.display = 'grid';
       document.getElementById('mobile-actions').style.display = 'flex';
@@ -687,7 +686,7 @@ function setupThirdPersonControls() {
   });
   
   window.addEventListener('click', (e) => {
-    if(isTouchDevice) return; // Managed separately via touch taps to avoid double triggers
+    if(isTouchDevice) return; 
     firePlayerProjectile();
   });
 }
@@ -718,14 +717,11 @@ function firePlayerProjectile() {
   });
 }
 
-// --- NEW SPECIFIC MOBILE/TOUCH BINDINGS FOR CAMERA & HUD ---
 function setupMobileTouchEvents() {
   if(!isTouchDevice) return;
 
-  // Orbit camera drag mapping for touches
   window.addEventListener('touchstart', (e) => {
     if(!gameActive) return;
-    // Don't interrupt interactions targets belonging to the mobile control pads
     if(e.target.closest('#mobile-dpad') || e.target.closest('#mobile-actions') || e.target.closest('.recipe-card')) return;
 
     let touch = e.touches[0];
@@ -733,7 +729,6 @@ function setupMobileTouchEvents() {
     prevMouseX = touch.clientX;
     prevMouseY = touch.clientY;
 
-    // Multi-touch tracking: If a second finger touches while orbiting, fire weapon
     if (e.touches.length > 1) {
       firePlayerProjectile();
     }
@@ -756,7 +751,6 @@ function setupMobileTouchEvents() {
     if(e.touches.length === 0) isDraggingCamera = false;
   });
 
-  // Attach touch input routing for visible virtual HUD elements
   const configureMobileBtn = (id, property) => {
     const element = document.getElementById(id);
     element.addEventListener('touchstart', (e) => { e.preventDefault(); input[property] = true; });
@@ -939,7 +933,6 @@ function attemptBuildOrCraft() {
   updateUI();
 }
 
-// --- CYCLE LOOPS ---
 function tick3D(now) {
   if(!gameActive) return; 
   requestAnimationFrame(tick3D);
