@@ -462,6 +462,7 @@ let realtimeChannel = null;
 let remotePlayersData = {}; 
 let isHost = true; 
 let roomPeers = {};
+let lastBroadcastTime = 0; // Throttle timestamp tracker
 
 // Robust Touch / iPadOS Device Check
 const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
@@ -524,6 +525,15 @@ function setupMultiplayerChannel() {
         // Transmit an initial arrival announcement down the wire
         sendNetworkPacket({ type: 'ping', id: window.playerId, sessionStartTime });
       }
+      
+      // AUTO-RECONNECT LOGIC: Catch drops or size breaks and rejoin safely
+      if (status === 'TIMED_OUT' || status === 'CLOSED') {
+        document.getElementById('host-badge').innerText = "Connection lost. Reconnecting...";
+        console.warn("Supabase Realtime socket dropped. Reconnecting channel...");
+        setTimeout(() => {
+          setupMultiplayerChannel();
+        }, 2000);
+      }
     });
 }
 
@@ -550,6 +560,12 @@ function determineHostRole() {
 
 function broadcastLocalState() {
   if (!player || !player.mesh) return;
+  
+  // THROTTLE LOGIC: Restrict rendering-loop updates to a maximum of 20 ticks per second (every 50ms)
+  const now = Date.now();
+  if (now - lastBroadcastTime < 50) return;
+  lastBroadcastTime = now;
+
   sendNetworkPacket({
     type: 'update', id: window.playerId, sessionStartTime,
     x: player.x, z: player.z, angle: player.mesh.rotation.y, color: player.color, name: chosenName
