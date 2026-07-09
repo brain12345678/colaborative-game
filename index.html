@@ -9,7 +9,244 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
-  :root{\n    --abyss:#0c1f2d;\n    --tide-navy:#123a3e;\n    --lagoon:#1f5f63;\n    --sand:#e7c989;\n    --coral:#ff6b4a;\n    --bioglow:#6ef2b0;\n    --abyssal-blue:#3a86ff;\n    --iron-gray:#a1a1a6;\n    --foam:#f3f7f2;\n    --foam-dim:rgba(243,247,242,0.15);\n    --depth-panel:rgba(12,31,45,0.85);\n  }\n\n  *{\n    margin:0; padding:0; box-sizing:border-box;\n    font-family:'Inter', sans-serif;\n    user-select:none; -webkit-user-select:none;\n  }\n\n  body, html {\n    background-color: var(--abyss);\n    color: var(--foam);\n    width:100%; height:100%;\n    overflow:hidden;\n  }\n\n  #landing-page {\n    position: fixed; inset:0; z-index:9999;\n    background: radial-gradient(circle at center, var(--tide-navy) 0%, var(--abyss) 100%);\n    display:flex; flex-direction:column; align-items:center; justify-content:center;\n    padding:20px; text-align:center;\n    transition: opacity 0.5s ease;\n  }\n  \n  .splash-logo {\n    font-family: 'Fraunces', serif;\n    font-size: 4rem; font-weight:300; letter-spacing:-0.03em;\n    color: var(--sand); margin-bottom:10px;\n    text-shadow: 0 4px 20px rgba(231,201,137,0.2);\n  }\n\n  .splash-tagline {\n    font-size:1.1rem; color: var(--bioglow);\n    font-family:'IBM Plex Mono', monospace; margin-bottom:40px;\n    text-transform:uppercase; letter-spacing:0.1em;\n  }\n\n  .login-card {\n    background: var(--depth-panel); border: 1px solid var(--lagoon);\n    padding:30px; border-radius:16px; width:100%; max-width:400px;\n    box-shadow: 0 20px 50px rgba(0,0,0,0.5);\n    backdrop-filter: blur(10px);\n  }\n\n  .form-group {\n    margin-bottom:20px; text-align:left;\n  }\n  \n  .form-group label {\n    display:block; font-size:0.8rem; text-transform:uppercase;\n    letter-spacing:0.05em; margin-bottom:8px; color: var(--iron-gray);\n    font-family:'IBM Plex Mono', monospace;\n  }\n\n  .form-group input {\n    width:100%; background: rgba(0,0,0,0.3); border:1px solid var(--lagoon);\n    padding:12px 16px; border-radius:8px; color:var(--foam);\n    font-size:1rem; outline:none; transition: border-color 0.2s;\n  }\n  .form-group input:focus { border-color: var(--bioglow); }\n\n  .connect-btn {\n    width:100%; background: var(--coral); color:var(--foam);\n    border:none; padding:14px; font-size:1.1rem; font-weight:600;\n    border-radius:8px; cursor:pointer; transition: transform 0.1s, background-color 0.2s;\n    box-shadow: 0 4px 15px rgba(255,107,74,0.3);\n  }\n  .connect-btn:hover { background-color: #ff8164; }\n  .connect-btn:active { transform: scale(0.98); }\n\n  #canvas3d {\n    display:none; width:100%; height:100%; background-color:#020a10;\n  }\n\n  #game-ui {\n    display:none; position:fixed; inset:0; pointer-events:none;\n    flex-direction:column; justify-content:space-between; padding:20px;\n    z-index:100;\n  }\n\n  .interactive { pointer-events: auto; }\n\n  .top-hud-bar {\n    display:flex; justify-content:space-between; align-items:flex-start; width:100%;\n  }\n\n  .status-vitals {\n    background: var(--depth-panel); border-left:4px solid var(--bioglow);\n    padding:15px; border-radius: 0 12px 12px 0; width:260px;\n    box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  }\n\n  .vital-row { margin-bottom:10px; }\n  .vital-row:last-child { margin-bottom:0; }\n  .vital-meta { display:flex; justify-content:space-between; font-size:0.75rem; font-family:'IBM Plex Mono', monospace; margin-bottom:4px; color:var(--iron-gray); }\n  .vital-meta span.val { color: var(--foam); font-weight:600; }\n  \n  .bar-container { width:100%; height:8px; background: rgba(243,247,242,0.1); border-radius:4px; overflow:hidden; }\n  .bar-fill { height:100%; width:100%; transition: width 0.2s ease-out; }\n  .bg-hp { background: var(--coral); }\n  .bg-shield { background: var(--abyssal-blue); }\n  .bg-o2 { background: var(--bioglow); }\n\n  .room-banner {\n    background: var(--depth-panel); border:1px solid var(--lagoon);\n    padding:10px 20px; border-radius:30px; font-family:'IBM Plex Mono', monospace;\n    font-size:0.85rem; letter-spacing:0.05em; color:var(--sand);\n    box-shadow: 0 4px 20px rgba(0,0,0,0.3);\n  }\n  \n  #host-badge {\n    font-size:0.7rem; display:block; color:var(--iron-gray); text-align:center; margin-top:2px;\n  }\n\n  .right-inventory {\n    background: var(--depth-panel); padding:15px; border-radius:12px;\n    border:1px solid rgba(243,247,242,0.08); width:200px;\n    box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  }\n  .inv-title {\n    font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:var(--iron-gray);\n    border-bottom:1px solid rgba(243,247,242,0.1); padding-bottom:6px; margin-bottom:8px;\n    text-transform:uppercase; letter-spacing:0.05em;\n  }\n  .inv-grid { display:grid; grid-template-columns: 1fr; gap:6px; }\n  .inv-item { display:flex; justify-content:space-between; font-size:0.85rem; font-family:'IBM Plex Mono', monospace; }\n  .inv-label { color: var(--iron-gray); }\n  .inv-qty { color: var(--sand); font-weight:600; }\n\n  .bottom-matrix-controls {\n    display:flex; justify-content:space-between; align-items:flex-end; width:100%;\n  }\n\n  .radial-crafting {\n    background: var(--depth-panel); padding:15px; border-radius:16px;\n    border:1px solid var(--lagoon); width:460px;\n    box-shadow: 0 15px 40px rgba(0,0,0,0.4);\n  }\n  .craft-header {\n    font-size:0.8rem; font-family:'IBM Plex Mono', monospace; color:var(--bioglow);\n    margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;\n  }\n  .craft-options {\n    display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; margin-bottom:10px;\n  }\n  .craft-btn {\n    background: rgba(0,0,0,0.4); border:1px solid var(--lagoon);\n    border-radius:8px; padding:10px 2px; color:var(--foam); cursor:pointer;\n    display:flex; flex-direction:column; align-items:center; transition: all 0.2s;\n  }\n  .craft-btn:hover { background: rgba(31,95,99,0.3); border-color:var(--bioglow); }\n  .craft-btn.active { background: var(--lagoon); border-color:var(--bioglow); box-shadow:0 0 10px rgba(110,242,176,0.2); }\n  .craft-icon { font-size:1.2rem; margin-bottom:2px; }\n  .craft-name { font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.02em; text-align:center; }\n  .craft-cost { font-size:0.58rem; color: var(--iron-gray); font-family:'IBM Plex Mono', monospace; margin-top:2px; text-align:center; }\n\n  #crafting-instructions {\n    font-size:0.65rem; color: var(--sand); font-style:italic; text-align:center;\n  }\n\n  .environment-card {\n    background: var(--depth-panel); padding:12px 20px; border-radius:12px;\n    text-align:right; font-family:'IBM Plex Mono', monospace;\n    box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  }\n  .env-time { font-size:1.1rem; font-weight:600; color: var(--foam); }\n  .env-day { font-size:0.75rem; color: var(--bioglow); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px; }\n\n  #mobile-dpad {\n    display:none; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px);\n    gap:6px; margin-left:10px; margin-bottom:10px;\n  }\n  .dpad-btn {\n    background: rgba(12,31,45,0.75); border:1px solid var(--lagoon); border-radius:10px;\n    color:var(--foam); display:flex; align-items:center; justify-content:center;\n    font-size:1.2rem; font-weight:bold; cursor:pointer;\n  }\n  .dpad-btn:active { background: var(--lagoon); }\n\n  #mobile-actions {\n    display:none; flex-direction:column; gap:10px; margin-right:10px; margin-bottom:10px;\n  }\n  .action-circle {\n    width:65px; height:65px; border-radius:50%; background: rgba(255,107,74,0.85);\n    border:2px solid var(--foam); color:var(--foam); font-weight:bold;\n    display:flex; align-items:center; justify-content:center; font-size:0.9rem;\n    box-shadow:0 6px 20px rgba(0,0,0,0.4); cursor:pointer;\n    text-transform:uppercase;\n  }\n  .action-circle:active { transform:scale(0.95); background: var(--coral); }\n  .action-circle.build-mode { background: rgba(58,134,255,0.85); }\n\n  #death-screen {\n    position:fixed; inset:0; background:rgba(12,5,5,0.9); z-index:10000;\n    display:none; flex-direction:column; align-items:center; justify-content:center; padding:20px;\n  }\n  #death-screen.active { display:flex; }\n  .death-title { font-family:'Fraunces', serif; font-size:3.5rem; color:var(--coral); margin-bottom:15px; }\n  .death-body { font-size:1.1rem; color:var(--iron-gray); margin-bottom:30px; font-family:'IBM Plex Mono', monospace; }\n  .respawn-btn { background:var(--sand); color:var(--abyss); font-weight:bold; border:none; padding:14px 40px; font-size:1rem; border-radius:8px; cursor:pointer; text-transform:uppercase; letter-spacing:0.05em;\n  }\n  .respawn-btn:hover { background:#f5ddaa; }\n\n  #controls-notice {\n    position:fixed; bottom:185px; left:50%; transform:translateX(-50%);\n    background:rgba(0,0,0,0.6); color:var(--iron-gray); font-size:0.75rem;\n    padding:6px 16px; border-radius:20px; white-space:nowrap; pointer-events:none;\n    border:1px solid rgba(243,247,242,0.05); text-align:center;\n  }\n\n  @media(max-width:992px){\n    .radial-crafting { width:100%; }\n    .craft-options { grid-template-columns: repeat(3, 1fr); }\n  }\n\n  @media(max-width:768px){\n    .top-hud-bar { flex-direction:column; gap:10px; align-items:center; }\n    .status-vitals { width:100%; border-radius:12px; border-left:none; border-top:4px solid var(--bioglow); }\n    .right-inventory { width:100%; display:flex; flex-direction:column; }\n    .inv-grid { grid-template-columns: repeat(5, 1fr); gap:6px; }\n    .bottom-matrix-controls { flex-direction:column-reverse; align-items:center; gap:15px; }\n    .radial-crafting { width:100%; }\n    .environment-card { width:100%; text-align:center; }\n    #controls-notice { display:none; }\n  }\n</style>
+  :root {
+    --abyss: #0c1f2d;            /* Deep dark blue background */
+    --tide-navy: #123a3e;        /* Dark teal accent */
+    --lagoon: #1f5f63;           /* Muted green/teal */
+    --sand: #e7c989;             /* Warm accent sand yellow */
+    --coral: #ff6b4a;            /* Warning/Vitals red-orange */
+    --bioglow: #6ef2b0;          /* Bright neon green glow */
+    --abyssal-blue: #3a86ff;     /* Vivid neon blue glow */
+    --iron-gray: #a1a1a6;
+    --foam: #f3f7f2;             /* Crisp off-white for text */
+    --foam-dim: rgba(243,247,242,0.62);
+    --line: rgba(243,247,242,0.14);
+    --depth-panel: rgba(12, 31, 45, 0.85);
+  }
+
+  * {
+    margin: 0; padding: 0; box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+    user-select: none; -webkit-user-select: none;
+  }
+
+  body, html {
+    background-color: var(--abyss);
+    color: var(--foam);
+    width: 100%; height: 100%;
+    overflow: hidden;
+  }
+
+  #landing-page {
+    position: fixed; inset: 0; z-index: 9999;
+    background: radial-gradient(circle at center, var(--tide-navy) 0%, var(--abyss) 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px; text-align: center;
+    transition: opacity 0.5s ease;
+  }
+  
+  .splash-logo {
+    font-family: 'Fraunces', serif;
+    font-size: 4rem; font-weight: 300; letter-spacing: -0.03em;
+    color: var(--bioglow); margin-bottom: 10px;
+    text-shadow: 0 4px 20px rgba(110, 242, 176, 0.2);
+  }
+
+  .splash-tagline {
+    font-size: 1.1rem; color: var(--abyssal-blue);
+    font-family: 'IBM Plex Mono', monospace; margin-bottom: 40px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+
+  .login-card {
+    background: var(--depth-panel); border: 1px solid var(--lagoon);
+    padding: 30px; border-radius: 16px; width: 100%; max-width: 400px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+  }
+
+  .form-group {
+    margin-bottom: 20px; text-align: left;
+  }
+  
+  .form-group label {
+    display: block; font-size: 0.8rem; text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 8px; color: var(--iron-gray);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .form-group input {
+    width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--lagoon);
+    padding: 12px 16px; border-radius: 8px; color: var(--foam);
+    font-size: 1rem; outline: none; transition: border-color 0.2s;
+  }
+  .form-group input:focus { border-color: var(--bioglow); }
+
+  .connect-btn {
+    width: 100%; background: var(--lagoon); color: var(--bioglow);
+    border: 1px solid var(--bioglow); padding: 14px; font-size: 1.1rem; font-weight: 600;
+    border-radius: 8px; cursor: pointer; transition: transform 0.1s, background-color 0.2s;
+    box-shadow: 0 4px 15px rgba(110, 242, 176, 0.15);
+  }
+  .connect-btn:hover { background-color: var(--tide-navy); }
+  .connect-btn:active { transform: scale(0.98); }
+
+  #canvas3d {
+    display: none; width: 100%; height: 100%; background-color: #020a10;
+  }
+
+  #game-ui {
+    display: none; position: fixed; inset: 0; pointer-events: none;
+    flex-direction: column; justify-content: space-between; padding: 20px;
+    z-index: 100;
+  }
+
+  .interactive { pointer-events: auto; }
+
+  .top-hud-bar {
+    display: flex; justify-content: space-between; align-items: flex-start; width: 100%;
+  }
+
+  .status-vitals {
+    background: var(--depth-panel); border-left: 4px solid var(--bioglow);
+    padding: 15px; border-radius: 0 12px 12px 0; width: 260px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+
+  .vital-row { margin-bottom: 10px; }
+  .vital-row:last-child { margin-bottom: 0; }
+  .vital-meta { display: flex; justify-content: space-between; font-size: 0.75rem; font-family: 'IBM Plex Mono', monospace; margin-bottom: 4px; color: var(--iron-gray); }
+  .vital-meta span.val { color: var(--foam); font-weight: 600; }
+  
+  .bar-container { width: 100%; height: 8px; background: rgba(243,247,242,0.1); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; width: 100%; transition: width 0.2s ease-out; }
+  .bg-hp { background: var(--coral); }
+  .bg-shield { background: var(--abyssal-blue); }
+  .bg-o2 { background: var(--bioglow); }
+
+  .room-banner {
+    background: var(--depth-panel); border: 1px solid var(--lagoon);
+    padding: 10px 20px; border-radius: 30px; font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem; letter-spacing: 0.05em; color: var(--bioglow);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  
+  #host-badge {
+    font-size: 0.7rem; display: block; color: var(--abyssal-blue); text-align: center; margin-top: 2px;
+  }
+
+  .right-inventory {
+    background: var(--depth-panel); padding: 15px; border-radius: 12px;
+    border: 1px solid var(--lagoon); width: 200px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  .inv-title {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--abyssal-blue);
+    border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 8px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .inv-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  .inv-item { display: flex; justify-content: space-between; font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace; }
+  .inv-label { color: var(--foam-dim); }
+  .inv-qty { color: var(--bioglow); font-weight: 600; }
+
+  .bottom-matrix-controls {
+    display: flex; justify-content: space-between; align-items: flex-end; width: 100%;
+  }
+
+  .radial-crafting {
+    background: var(--depth-panel); padding: 15px; border-radius: 16px;
+    border: 1px solid var(--lagoon); width: 460px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+  }
+  .craft-header {
+    font-size: 0.8rem; font-family: 'IBM Plex Mono', monospace; color: var(--bioglow);
+    margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .craft-options {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px;
+  }
+  .craft-btn {
+    background: rgba(0,0,0,0.4); border: 1px solid var(--lagoon);
+    border-radius: 8px; padding: 10px 2px; color: var(--foam); cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; transition: all 0.2s;
+  }
+  .craft-btn:hover { background: rgba(31,95,99,0.3); border-color: var(--bioglow); }
+  .craft-btn.active { background: var(--lagoon); border-color: var(--bioglow); box-shadow: 0 0 10px rgba(110,242,176,0.2); }
+  .craft-icon { font-size: 1.2rem; margin-bottom: 2px; }
+  .craft-name { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; text-align: center; }
+  .craft-cost { font-size: 0.58rem; color: var(--abyssal-blue); font-family: 'IBM Plex Mono', monospace; margin-top: 2px; text-align: center; }
+
+  #crafting-instructions {
+    font-size: 0.65rem; color: var(--foam-dim); font-style: italic; text-align: center;
+  }
+
+  .environment-card {
+    background: var(--depth-panel); padding: 12px 20px; border-radius: 12px;
+    text-align: right; font-family: 'IBM Plex Mono', monospace; border: 1px solid var(--lagoon);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+  .env-time { font-size: 1.1rem; font-weight: 600; color: var(--bioglow); }
+  .env-day { font-size: 0.75rem; color: var(--abyssal-blue); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+
+  #mobile-dpad {
+    display: none; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px);
+    gap: 6px; margin-left: 10px; margin-bottom: 10px;
+  }
+  .dpad-btn {
+    background: rgba(12,31,45,0.75); border: 1px solid var(--lagoon); border-radius: 10px;
+    color: var(--bioglow); display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; font-weight: bold; cursor: pointer;
+  }
+  .dpad-btn:active { background: var(--lagoon); }
+
+  #mobile-actions {
+    display: none; flex-direction: column; gap: 10px; margin-right: 10px; margin-bottom: 10px;
+  }
+  .action-circle {
+    width: 65px; height: 65px; border-radius: 50%; background: rgba(31,95,99,0.85);
+    border: 2px solid var(--bioglow); color: var(--foam); font-weight: bold;
+    display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4); cursor: pointer;
+    text-transform: uppercase;
+  }
+  .action-circle:active { transform: scale(0.95); background: var(--lagoon); }
+  .action-circle.build-mode { border-color: var(--abyssal-blue); }
+
+  #death-screen {
+    position: fixed; inset: 0; background: rgba(12,5,5,0.9); z-index: 10000;
+    display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+  }
+  #death-screen.active { display: flex; }
+  .death-title { font-family: 'Fraunces', serif; font-size: 3.5rem; color: var(--coral); margin-bottom: 15px; }
+  .death-body { font-size: 1.1rem; color: var(--iron-gray); margin-bottom: 30px; font-family: 'IBM Plex Mono', monospace; }
+  .respawn-btn { background: var(--lagoon); color: var(--bioglow); border: 1px solid var(--bioglow); font-weight: bold; padding: 14px 40px; font-size: 1rem; border-radius: 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .respawn-btn:hover { background: var(--tide-navy); }
+
+  #controls-notice {
+    position: fixed; bottom: 185px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.6); color: var(--foam-dim); font-size: 0.75rem;
+    padding: 6px 16px; border-radius: 20px; white-space: nowrap; pointer-events: none;
+    border: 1px solid var(--lagoon); text-align: center;
+  }
+
+  @media(max-width: 992px){
+    .radial-crafting { width: 100%; }
+    .craft-options { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  @media(max-width: 768px){
+    .top-hud-bar { flex-direction: column; gap: 10px; align-items: center; }
+    .status-vitals { width: 100%; border-radius: 12px; border-left: none; border-top: 4px solid var(--bioglow); }
+    .right-inventory { width: 100%; display: flex; flex-direction: column; }
+    .inv-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+    .bottom-matrix-controls { flex-direction: column-reverse; align-items: center; gap: 15px; }
+    .radial-crafting { width: 100%; }
+    .environment-card { width: 100%; text-align: center; }
+    #controls-notice { display: none; }
+  }
+</style>
 </head>
 <body>
 
@@ -172,7 +409,7 @@ function setupMultiplayerChannel() {
       else if (msg.type === 'build') {
         const geometry = msg.structureType === 'wall' ? new THREE.BoxGeometry(3, 3, 0.8) : new THREE.CylinderGeometry(1, 1.2, 4, 6);
         const material = new THREE.MeshStandardMaterial({ 
-          color: msg.structureType === 'wall' ? 0x2c3e50 : 0x1f5f63, 
+          color: msg.structureType === 'wall' ? 0x123a3e : 0x1f5f63, 
           roughness: 0.4, 
           metalness: 0.8 
         });
@@ -206,7 +443,6 @@ function setupMultiplayerChannel() {
       
       if (status === 'TIMED_OUT' || status === 'CLOSED') {
         document.getElementById('host-badge').innerText = "Connection lost. Reconnecting...";
-        console.warn("Supabase Realtime socket dropped. Reconnecting channel...");
         setTimeout(() => {
           setupMultiplayerChannel();
         }, 2000);
@@ -280,7 +516,7 @@ function initiateGameConnection() {
   }, 500);
 }
 
-// --- 3D ENGINE CONFIGURATION (HIGH VISIBILITY / THIRD PERSON) ---
+// --- 3D ENGINE CONFIGURATION ---
 let scene, camera, renderer;
 let gameActive = false, lastTime = 0;
 
@@ -407,7 +643,6 @@ function createLocalPlayerMesh() {
 function initResources() {
   resources.forEach(r => { if(r.mesh) scene.remove(r.mesh); });
   resources = [];
-  
   for (let i = 0; i < 20; i++) {
     spawnResource('wood');
     spawnResource('coral');
@@ -653,7 +888,7 @@ function executeStructureBuild(bx, bz) {
     
     const geometry = currentSchematic === 'wall' ? new THREE.BoxGeometry(3, 3, 0.8) : new THREE.CylinderGeometry(1, 1.2, 4, 6);
     const material = new THREE.MeshStandardMaterial({ 
-      color: currentSchematic === 'wall' ? 0x2c3e50 : 0x1f5f63, 
+      color: currentSchematic === 'wall' ? 0x123a3e : 0x1f5f63, 
       roughness: 0.4, 
       metalness: 0.8 
     });
@@ -807,9 +1042,7 @@ function processPlayerMovement(delta) {
   resources.forEach((res, idx) => {
     if (Math.hypot(player.x - res.x, player.z - res.z) < 3.2) {
       inventory[res.type] = (inventory[res.type] || 0) + (res.type==='iron'||res.type==='glow'?1:2);
-      
       sendNetworkPacket({ type: 'leave', id: res.id }); 
-      
       if (res.mesh) scene.remove(res.mesh);
       resources.splice(idx, 1);
       updateUI();
