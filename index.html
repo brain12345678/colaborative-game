@@ -189,29 +189,45 @@
   .env-time { font-size: 1.1rem; font-weight: 600; color: var(--bioglow); }
   .env-day { font-size: 0.75rem; color: var(--abyssal-blue); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
 
-  #mobile-dpad {
-    display: none; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px);
-    gap: 6px; margin-left: 10px; margin-bottom: 10px;
+  /* REVAMPED SMOOTH TOUCH ANALOG JOYSTICK CONTAINER */
+  #joystick-wrapper {
+    display: none;
+    width: 120px; height: 120px;
+    background: rgba(12, 31, 45, 0.6);
+    border: 2px solid var(--lagoon);
+    border-radius: 50%;
+    position: relative;
+    margin-left: 20px;
+    margin-bottom: 20px;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 15px rgba(31, 95, 99, 0.4);
+    touch-action: none;
   }
-  .dpad-btn {
-    background: rgba(12,31,45,0.75); border: 1px solid var(--lagoon); border-radius: 10px;
-    color: var(--bioglow); display: flex; align-items: center; justify-content: center;
-    font-size: 1.2rem; font-weight: bold; cursor: pointer;
+  #joystick-node {
+    width: 50px; height: 50px;
+    background: var(--tide-navy);
+    border: 2px solid var(--bioglow);
+    border-radius: 50%;
+    position: absolute;
+    left: calc(50% - 25px);
+    top: calc(50% - 25px);
+    box-shadow: 0 0 10px rgba(110, 242, 176, 0.4);
+    pointer-events: none;
   }
-  .dpad-btn:active { background: var(--lagoon); }
 
   #mobile-actions {
-    display: none; flex-direction: column; gap: 10px; margin-right: 10px; margin-bottom: 10px;
+    display: none; flex-direction: column; gap: 12px; margin-right: 20px; margin-bottom: 20px;
   }
   .action-circle {
-    width: 65px; height: 65px; border-radius: 50%; background: rgba(31,95,99,0.85);
-    border: 2px solid var(--bioglow); color: var(--foam); font-weight: bold;
-    display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+    width: 70px; height: 70px; border-radius: 50%; background: rgba(31,95,99,0.8);
+    border: 2px solid var(--bioglow); color: var(--foam); font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
     box-shadow: 0 6px 20px rgba(0,0,0,0.4); cursor: pointer;
-    text-transform: uppercase;
+    text-transform: uppercase; font-family: 'IBM Plex Mono', monospace;
   }
-  .action-circle:active { transform: scale(0.95); background: var(--lagoon); }
-  .action-circle.build-mode { border-color: var(--abyssal-blue); }
+  .action-circle:active { transform: scale(0.92); background: var(--lagoon); }
+  .action-circle.action-trigger { border-color: var(--abyssal-blue); background: rgba(58, 134, 255, 0.2); border: 2px solid var(--abyssal-blue); }
 
   #death-screen {
     position: fixed; inset: 0; background: rgba(12,5,5,0.9); z-index: 10000;
@@ -310,10 +326,8 @@
   </div>
 
   <div class="bottom-matrix-controls">
-    <div id="mobile-dpad" class="interactive">
-      <div></div><div class="dpad-btn" id="dpad-u">▲</div><div></div>
-      <div class="dpad-btn" id="dpad-l">◀</div><div></div><div class="dpad-btn" id="dpad-r">▶</div>
-      <div></div><div class="dpad-btn" id="dpad-d">▼</div><div></div>
+    <div id="joystick-wrapper" class="interactive">
+      <div id="joystick-node"></div>
     </div>
 
     <div class="radial-crafting interactive">
@@ -339,8 +353,8 @@
     </div>
 
     <div id="mobile-actions" class="interactive">
-      <div class="action-circle build-mode" id="m-action-build">Build</div>
-      <div class="action-circle" id="m-action-fire">Fire</div>
+      <div class="action-circle" id="m-action-interact">Action</div>
+      <div class="action-circle action-trigger" id="m-action-fire">Trigger</div>
     </div>
 
     <div class="environment-card">
@@ -356,7 +370,7 @@
 <script>
 // --- INTERNET MULTIPLAYER LAYER CORE ---
 window.ATOLL_SUPABASE_URL = "https://ndjgohctnkpmlawaznjf.supabase.co";
-window.ATOLL_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kamdvaGN0bmtwbWxhd2F6bmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTY2MzMsImV4cCI6MjA5OTE5MjYzM30.HEdfZcFIFqwDCQ85sUkbeO40uA2PyVvKL8x84LPYunk";
+window.ATOLL_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kamdvaGN0bmtwbWxhd2F6bnbmFjZSI6eyJrZXkiOiJwX2F0b2xsIn19.HEdfZcFIFqwDCQ85sUkbeO40uA2PyVvKL8x84LPYunk";
 
 let multiplayerRoomId = 'atoll-solo';
 let chosenName = 'Mariner';
@@ -505,10 +519,10 @@ function initiateGameConnection() {
     document.getElementById('game-ui').style.display = 'flex';
     
     if (isTouchDevice) {
-      document.getElementById('mobile-dpad').style.display = 'grid';
+      document.getElementById('joystick-wrapper').style.display = 'flex';
       document.getElementById('mobile-actions').style.display = 'flex';
-      document.getElementById('controls-notice').innerHTML = "Drag anywhere on screen to orbit view<br>Tap with a second finger to Fire / Shoot";
-      document.getElementById('crafting-instructions').innerText = "Radial Schematics (Use screen buttons to cycle and build)";
+      document.getElementById('controls-notice').innerHTML = "Use left joystick to move entity. Use Trigger/Action to explore and fight.";
+      document.getElementById('crafting-instructions').innerText = "Radial Schematics (Use panel selectors to change blueprints)";
     }
 
     setupMultiplayerChannel();
@@ -532,7 +546,8 @@ let player = {
   color: '#' + Math.floor(Math.random()*16777215).toString(16),
   mesh: null,
   targetX: 0, targetZ: 0, isMovingToTarget: false,
-  camAngle: 0, camPitch: 0.5, camRadius: 28
+  camAngle: 0, camPitch: 0.5, camRadius: 28,
+  joyX: 0, joyZ: 0 // Track joystick input values vector
 };
 
 let remotePlayers = {}; 
@@ -588,6 +603,7 @@ function init3DEngine() {
 
   window.addEventListener('resize', onWindowResize);
   setupInputHandlers();
+  setupJoystickControls();
 
   gameActive = true;
   lastTime = performance.now();
@@ -818,12 +834,106 @@ function setupInputHandlers() {
   window.addEventListener('mouseup', () => isDraggingCamera = false);
   canvasElement.addEventListener('contextmenu', e => e.preventDefault());
 
-  canvasElement.addEventListener('touchstart', e => {
-    if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      handleIslandInteraction(touch.clientX, touch.clientY);
+  // Drag anywhere else on the scene canvas to track / swing camera lookups
+  canvasElement.addEventListener('touchmove', e => {
+    if (e.touches.length === 1 && player.joyX === 0 && player.joyZ === 0) {
+      let t = e.touches[0];
+      if (previousMouseX !== 0 && previousMouseY !== 0) {
+        let deltaX = t.clientX - previousMouseX;
+        let deltaY = t.clientY - previousMouseY;
+        player.camAngle -= deltaX * 0.009;
+        player.camPitch = Math.max(0.1, Math.min(1.2, player.camPitch + deltaY * 0.009));
+      }
+      previousMouseX = t.clientX;
+      previousMouseY = t.clientY;
     }
   }, { passive: true });
+  
+  canvasElement.addEventListener('touchend', () => { previousMouseX = 0; previousMouseY = 0; });
+
+  // Map action buttons for mobile triggers
+  document.getElementById('m-action-fire').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    // Simulate front firing in front of the character model direction orientation
+    let forwardX = player.x + Math.sin(player.mesh.rotation.y) * 5;
+    let forwardZ = player.z + Math.cos(player.mesh.rotation.y) * 5;
+    if (currentSchematic !== 'none') {
+      executeCombatAttack(forwardX, forwardZ);
+    }
+  });
+
+  document.getElementById('m-action-interact').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    let fX = player.x + Math.sin(player.mesh.rotation.y) * 4;
+    let fZ = player.z + Math.cos(player.mesh.rotation.y) * 4;
+    if (!['none', 'spear', 'blaster'].includes(currentSchematic)) {
+      executeStructureBuild(fX, fZ);
+    }
+  });
+}
+
+// --- VIRTUAL TRANSLATIONAL ENGINE RE-COUPLING ---
+function setupJoystickControls() {
+  const wrap = document.getElementById('joystick-wrapper');
+  const node = document.getElementById('joystick-node');
+  let activeTouchId = null;
+  let startX = 0, startY = 0;
+  const maxRadius = 45; 
+
+  wrap.addEventListener('touchstart', e => {
+    if (activeTouchId !== null) return;
+    const touch = e.changedTouches[0];
+    activeTouchId = touch.identifier;
+    
+    let rect = wrap.getBoundingClientRect();
+    startX = rect.left + rect.width / 2;
+    startY = rect.top + rect.height / 2;
+  }, { passive: true });
+
+  wrap.addEventListener('touchmove', e => {
+    if (activeTouchId === null) return;
+    
+    let touch = null;
+    for (let t of e.touches) {
+      if (t.identifier === activeTouchId) { touch = t; break; }
+    }
+    if (!touch) return;
+
+    let dx = touch.clientX - startX;
+    let dy = touch.clientY - startY;
+    let dist = Math.hypot(dx, dy);
+
+    if (dist > maxRadius) {
+      dx = (dx / dist) * maxRadius;
+      dy = (dy / dist) * maxRadius;
+      dist = maxRadius;
+    }
+
+    node.style.transform = `translate(${dx}px, ${dy}px)`;
+
+    // Map input forces into calculations relative to our active orbital workspace camera views
+    let force = dist / maxRadius;
+    let inputAngle = Math.atan2(dx, dy);
+    
+    player.joyX = Math.sin(inputAngle + player.camAngle) * force;
+    player.joyZ = Math.cos(inputAngle + player.camAngle) * force;
+    player.isMovingToTarget = false;
+  }, { passive: true });
+
+  const endJoystick = e => {
+    for (let t of e.changedTouches) {
+      if (t.identifier === activeTouchId) {
+        activeTouchId = null;
+        node.style.transform = 'translate(0px, 0px)';
+        player.joyX = 0;
+        player.joyZ = 0;
+        break;
+      }
+    }
+  };
+
+  wrap.addEventListener('touchend', endJoystick);
+  wrap.addEventListener('touchcancel', endJoystick);
 }
 
 function handleIslandInteraction(clientX, clientY) {
@@ -871,11 +981,11 @@ function selectSchematic(type) {
   document.getElementById('btn-sch-' + type).classList.add('active');
   
   const inst = document.getElementById('crafting-instructions');
-  if (type === 'none') inst.innerText = "Observe Mode: Click / Tap anywhere on the island mesh to travel safely.";
-  if (type === 'wall') inst.innerText = "Fabricate Mode: Click anywhere on the island map grid to position an Alloy Wall.";
-  if (type === 'table') inst.innerText = "Fabricate Mode: Click anywhere on the island map grid to position a Pylon Lab.";
-  if (type === 'spear') inst.innerText = "Shock Spear Armed: Left-Click near an active enemy entity to strike.";
-  if (type === 'blaster') inst.innerText = "Ion Blaster Engaged: Left-Click anywhere to discharge long-range energy projectiles.";
+  if (type === 'none') inst.innerText = "Observe Mode: Drag joystick to move. Point and look with screen swipes.";
+  if (type === 'wall') inst.innerText = "Fabricate Mode: Move ahead and tap Action to drop an Alloy Wall.";
+  if (type === 'table') inst.innerText = "Fabricate Mode: Move ahead and tap Action to drop a Pylon Lab.";
+  if (type === 'spear') inst.innerText = "Shock Spear Armed: Tap Trigger to swing and strike close enemies.";
+  if (type === 'blaster') inst.innerText = "Ion Blaster Engaged: Tap Trigger to discharge long-range energy projectiles.";
 }
 
 function executeStructureBuild(bx, bz) {
@@ -999,21 +1109,29 @@ function updateEnvironmentClock(delta) {
 }
 
 function processPlayerMovement(delta) {
-  let moveX = 0, moveZ = 0;
   let speed = 15.0;
 
+  // Process Keyboard inputs first
+  let moveX = 0, moveZ = 0;
   if (keys['w'] || keys['arrowup']) { moveX += Math.sin(player.camAngle); moveZ += Math.cos(player.camAngle); }
   if (keys['s'] || keys['arrowdown']) { moveX -= Math.sin(player.camAngle); moveZ -= Math.cos(player.camAngle); }
   if (keys['a'] || keys['arrowleft']) { moveX += Math.cos(player.camAngle); moveZ -= Math.sin(player.camAngle); }
   if (keys['d'] || keys['arrowright']) { moveX -= Math.cos(player.camAngle); moveZ += Math.sin(player.camAngle); }
 
   if (moveX !== 0 || moveZ !== 0) {
-    player.isMovingToTarget = false;
     let len = Math.hypot(moveX, moveZ);
     player.x += (moveX / len) * speed * delta;
     player.z += (moveZ / len) * speed * delta;
     player.mesh.rotation.y = Math.atan2(moveX, moveZ);
-  } else if (player.isMovingToTarget) {
+  } 
+  // Process Joystick vectors if no active key registers
+  else if (player.joyX !== 0 || player.joyZ !== 0) {
+    player.x += player.joyX * speed * delta;
+    player.z += player.joyZ * speed * delta;
+    player.mesh.rotation.y = Math.atan2(player.joyX, player.joyZ);
+  }
+  // Fall back to mouse path targeting updates
+  else if (player.isMovingToTarget) {
     let dx = player.targetX - player.x;
     let dz = player.targetZ - player.z;
     let dist = Math.hypot(dx, dz);
@@ -1177,7 +1295,7 @@ function resetGame() {
   if (isHost) initResources();
   
   player.x = 0; player.z = 0; player.hp = 100; player.shield = 0; player.oxygen = 100;
-  player.camAngle = 0; player.camPitch = 0.5;
+  player.camAngle = 0; player.camPitch = 0.5; player.joyX = 0; player.joyZ = 0;
   inventory = { wood: 12, coral: 6, scrap: 0, iron: 0, glow: 0 };
   craftedWeapons = { spear: false, blaster: false };
   cycleTime = 40; isNight = false; currentDay = 1;
