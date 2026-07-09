@@ -440,51 +440,120 @@
 </div>
 
 <script>
-// --- MULTIPLAYER LAYER CORE ---
+// --- INTERNET MULTIPLAYER LAYER CORE ---
 let multiplayerRoomId = 'atoll-solo';
 let chosenName = 'Mariner';
 window.playerId = 'p_' + Math.random().toString(36).substr(2, 9);
 const sessionStartTime = Date.now();
 
-let networkChannel;
+let wsConnection;
 let remotePlayersData = {}; 
 let isHost = true; 
 let roomPeers = {};
 
+// Public pool of WebSockets to distribute internet packets across devices
+const PUBLIC_RELAYS = [
+  "wss://relay.damus.io",
+  "wss://nos.lol",
+  "wss://relay.nostr.band"
+];
+let activeRelayUrl = PUBLIC_RELAYS[Math.floor(Math.random() * PUBLIC_RELAYS.length)];
+
+// Robust Touch / iPadOS Device Check
 const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
 
 function setupMultiplayerChannel() {
-  networkChannel = new BroadcastChannel(`atoll_channel_3d_tp_${multiplayerRoomId}`);
-  networkChannel.onmessage = (event) => {
-    const msg = event.data;
-    if (!msg || !msg.id || msg.id === window.playerId) return;
+  console.log("Connecting to internet relay:", activeRelayUrl);
+  document.getElementById('host-badge').innerText = "Role: Connecting to Relay...";
+  
+  try {
+    wsConnection = new WebSocket(activeRelayUrl);
+    
+    wsConnection.onopen = () => {
+      // Subscribe explicitly to kind 42 events matching our unique Room ID
+      const subscriptionRequest = ["REQ", "sub_" + window.playerId, {
+        "kinds": [42],
+        "#g": [multiplayerRoomId]
+      }];
+      wsConnection.send(JSON.stringify(subscriptionRequest));
+      
+      // Broadcast initial entry ping
+      sendNetworkPacket({ type: 'ping', id: window.playerId, sessionStartTime });
+    };
 
-    if (msg.type === 'update') {
-      remotePlayersData[msg.id] = { x: msg.x, z: msg.z, angle: msg.angle, color: msg.color, name: msg.name, lastSeen: Date.now() };
-      roomPeers[msg.id] = msg.sessionStartTime;
-      determineHostRole();
-      updateRemotePlayerMesh(msg.id, msg.x, msg.z, msg.angle, msg.color, msg.name);
-    } 
-    else if (msg.type === 'leave') {
-      removeRemotePlayerMesh(msg.id);
-      delete remotePlayersData[msg.id];
-      delete roomPeers[msg.id];
-      determineHostRole();
-    } 
-    else if (msg.type === 'ping') {
-      roomPeers[msg.id] = msg.sessionStartTime;
-      determineHostRole();
-      broadcastLocalState();
-    }
-    else if (msg.type === 'worldSync' && !isHost) {
-      cycleTime = msg.cycleTime;
-      isNight = msg.isNight;
-      currentDay = msg.currentDay;
-      syncEnemiesFromHost(msg.enemies);
-      syncResourcesFromHost(msg.resources);
-    }
+    wsConnection.onmessage = (event) => {
+      try {
+        const rawData = JSON.parse(event.data);
+        // Nostr Envelope verification: ["EVENT", subscriptionId, eventObject]
+        if (rawData[0] === "EVENT" && rawData[2] && rawData[2].content) {
+          const msg = JSON.parse(rawData[2].content);
+          
+          if (!msg || msg.id === window.playerId) return;
+
+          if (msg.type === 'update') {
+            remotePlayersData[msg.id] = { x: msg.x, z: msg.z, angle: msg.angle, color: msg.color, name: msg.name, lastSeen: Date.now() };
+            roomPeers[msg.id] = msg.sessionStartTime;
+            determineHostRole();
+            updateRemotePlayerMesh(msg.id, msg.x, msg.z, msg.angle, msg.color, msg.name);
+          } 
+          else if (msg.type === 'leave') {
+            // Check if it's a player leaving or a resource picked up by someone else
+            const resIdx = resources.findIndex(r => r.id === msg.id);
+            if (resIdx !== -1) {
+              if (resources[resIdx].mesh) scene.remove(resources[resIdx].mesh);
+              resources.splice(resIdx, 1);
+            } else {
+              removeRemotePlayerMesh(msg.id);
+              delete remotePlayersData[msg.id];
+              delete roomPeers[msg.id];
+              determineHostRole();
+            }
+          } 
+          else if (msg.type === 'ping') {
+            roomPeers[msg.id] = msg.sessionStartTime;
+            determineHostRole();
+            broadcastLocalState();
+          }
+          else if (msg.type === 'worldSync' && !isHost) {
+            cycleTime = msg.cycleTime;
+            isNight = msg.isNight;
+            currentDay = msg.currentDay;
+            syncEnemiesFromHost(msg.enemies);
+            syncResourcesFromHost(msg.resources);
+          }
+        }
+      } catch (e) {
+        // Skip parsing errors from miscellaneous payload data on the public server
+      }
+    };
+
+    wsConnection.onerror = () => {
+      console.warn("Relay error, attempting fallback setup...");
+    };
+    
+    wsConnection.onclose = () => {
+      // Automatic reconnection management if connection drops out
+      setTimeout(setupMultiplayerChannel, 5000);
+    };
+
+  } catch(err) {
+    console.error("WebSocket structural initialization failure", err);
+  }
+}
+
+function sendNetworkPacket(payload) {
+  if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) return;
+  
+  // Create standardized ephemeral relay frame payload
+  const event = {
+    "kind": 42,
+    "created_at": Math.floor(Date.now() / 1000),
+    "tags": [["g", multiplayerRoomId]],
+    "content": JSON.stringify(payload),
+    "pubkey": "0000000000000000000000000000000000000000000000000000000000000000",
+    "id": "atoll_" + Math.random().toString(36).substr(2, 9)
   };
-  networkChannel.postMessage({ type: 'ping', id: window.playerId, sessionStartTime });
+  wsConnection.send(JSON.stringify(["EVENT", event]));
 }
 
 function determineHostRole() {
@@ -498,16 +567,16 @@ function determineHostRole() {
 }
 
 function broadcastLocalState() {
-  if (!networkChannel || !player || !player.mesh) return;
-  networkChannel.postMessage({
+  if (!player || !player.mesh) return;
+  sendNetworkPacket({
     type: 'update', id: window.playerId, sessionStartTime,
     x: player.x, z: player.z, angle: player.mesh.rotation.y, color: player.color, name: chosenName
   });
 }
 
 function broadcastWorldState() {
-  if (!networkChannel || !isHost) return;
-  networkChannel.postMessage({
+  if (!isHost) return;
+  sendNetworkPacket({
     type: 'worldSync', id: window.playerId,
     cycleTime, isNight, currentDay,
     enemies: enemies.map(e => ({ id: e.id, x: e.x, z: e.z, hp: e.hp })),
@@ -527,6 +596,7 @@ function initiateGameConnection() {
     document.getElementById('canvas3d').style.display = 'block';
     document.getElementById('game-ui').style.display = 'flex';
     
+    // UI Layout adaptations if playing via Touch Interface / iPad
     if (isTouchDevice) {
       document.getElementById('mobile-dpad').style.display = 'grid';
       document.getElementById('mobile-actions').style.display = 'flex';
@@ -534,12 +604,12 @@ function initiateGameConnection() {
       document.getElementById('crafting-instructions').innerText = "Radial Schematics (Use screen buttons to cycle and build)";
     }
 
-    init3DEngine();
     setupMultiplayerChannel();
+    init3DEngine();
   }, 500);
 }
 
-// --- 3D ENGINE CONFIGURATION ---
+// --- 3D ENGINE CONFIGURATION (HIGH VISIBILITY / THIRD PERSON) ---
 let scene, camera, renderer;
 let gameActive = false, lastTime = 0;
 
@@ -672,7 +742,7 @@ function setupThirdPersonControls() {
   });
   
   window.addEventListener('click', (e) => {
-    if(isTouchDevice) return; 
+    if(isTouchDevice) return; // Managed separately via touch taps to avoid double triggers
     firePlayerProjectile();
   });
 }
@@ -703,11 +773,14 @@ function firePlayerProjectile() {
   });
 }
 
+// --- SPECIFIC MOBILE/TOUCH BINDINGS FOR CAMERA & HUD ---
 function setupMobileTouchEvents() {
   if(!isTouchDevice) return;
 
+  // Orbit camera drag mapping for touches
   window.addEventListener('touchstart', (e) => {
     if(!gameActive) return;
+    // Don't interrupt interactions targets belonging to the mobile control pads
     if(e.target.closest('#mobile-dpad') || e.target.closest('#mobile-actions') || e.target.closest('.recipe-card')) return;
 
     let touch = e.touches[0];
@@ -715,6 +788,7 @@ function setupMobileTouchEvents() {
     prevMouseX = touch.clientX;
     prevMouseY = touch.clientY;
 
+    // Multi-touch tracking: If a second finger touches while orbiting, fire weapon
     if (e.touches.length > 1) {
       firePlayerProjectile();
     }
@@ -737,6 +811,7 @@ function setupMobileTouchEvents() {
     if(e.touches.length === 0) isDraggingCamera = false;
   });
 
+  // Attach touch input routing for visible virtual HUD elements
   const configureMobileBtn = (id, property) => {
     const element = document.getElementById(id);
     element.addEventListener('touchstart', (e) => { e.preventDefault(); input[property] = true; });
@@ -801,7 +876,6 @@ function createResourceMesh(type, x, z, id) {
 }
 
 function syncEnemiesFromHost(hostEnemies) {
-  if(!hostEnemies) return;
   enemies.forEach(e => { if(e.mesh) scene.remove(e.mesh); });
   enemies = hostEnemies.map(h => {
     let geo = new THREE.BoxGeometry(2.2, 2.2, 2.2);
@@ -814,7 +888,6 @@ function syncEnemiesFromHost(hostEnemies) {
 }
 
 function syncResourcesFromHost(hostResources) {
-  if(!hostResources) return;
   resources.forEach(r => { if(r.mesh) scene.remove(r.mesh); });
   resources = [];
   hostResources.forEach(hr => createResourceMesh(hr.type, hr.x, hr.z, hr.id));
@@ -1019,16 +1092,15 @@ function tick3D(now) {
     }
   }
 
-  for (let i = resources.length - 1; i >= 0; i--) {
-    let res = resources[i];
+  resources.forEach((res, idx) => {
     if(Math.hypot(player.x - res.x, player.z - res.z) < 3.2) {
       inventory[res.type] = (inventory[res.type] || 0) + 2;
-      if (networkChannel) networkChannel.postMessage({ type: 'leave', id: res.id }); 
+      sendNetworkPacket({ type: 'leave', id: res.id }); 
       if (res.mesh) scene.remove(res.mesh);
-      resources.splice(i, 1);
+      resources.splice(idx, 1);
       updateUI();
     }
-  }
+  });
 
   let nearTableCheck = false;
   let shieldGen = 0;
@@ -1039,8 +1111,7 @@ function tick3D(now) {
   if(nearTableCheck !== isNearTable) { isNearTable = nearTableCheck; updateUI(); }
   if(shieldGen > 0) { player.shield = Math.min(player.maxShield, player.shield + shieldGen); updateUI(); }
 
-  for (let idx = projectiles.length - 1; idx >= 0; idx--) {
-    let p = projectiles[idx];
+  projectiles.forEach((p, idx) => {
     p.x += p.vx * delta; p.y += p.vy * delta; p.z += p.vz * delta;
     p.traveled += Math.hypot(p.vx * delta, p.vz * delta);
     if(p.mesh) p.mesh.position.set(p.x, p.y, p.z);
@@ -1057,7 +1128,7 @@ function tick3D(now) {
       if(p.mesh) scene.remove(p.mesh);
       projectiles.splice(idx, 1);
     }
-  }
+  });
 
   renderer.render(scene, camera);
 }
@@ -1087,8 +1158,7 @@ function processHostEnemySimulation(delta) {
     });
   }
 
-  for (let idx = enemies.length - 1; idx >= 0; idx--) {
-    let en = enemies[idx];
+  enemies.forEach((en, idx) => {
     let targets = [{ x: player.x, z: player.z, isPlayer: true }];
     Object.keys(remotePlayersData).forEach(id => targets.push({ x: remotePlayersData[id].x, z: remotePlayersData[id].z, isPlayer: false }));
     
@@ -1118,7 +1188,7 @@ function processHostEnemySimulation(delta) {
       if(en.mesh) scene.remove(en.mesh);
       enemies.splice(idx, 1);
     }
-  }
+  });
 }
 
 function gameOver() { 
