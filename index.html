@@ -9,444 +9,107 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
-  :root{
-    --abyss:#0c1f2d;
-    --tide-navy:#123a3e;
-    --lagoon:#1f5f63;
-    --sand:#e7c989;
-    --coral:#ff6b4a;
-    --bioglow:#6ef2b0;
-    --abyssal-blue:#3a86ff;
-    --iron-gray:#a1a1a6;
-    --foam:#f3f7f2;
-    --foam-dim:rgba(243,247,242,0.62);
-    --line:rgba(243,247,242,0.14);
-  }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  body{
-    background:var(--abyss);
-    color:var(--foam);
-    font-family:'Inter', sans-serif;
-    overflow:hidden;
-    user-select:none;
-    height:100vh;
-    touch-action: none;
-  }
-  #landing-page {
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    background: radial-gradient(circle at center, #1f5f63 0%, var(--abyss) 100%);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    transition: opacity 0.5s ease;
-  }
-  .lobby-card {
-    background: rgba(5, 15, 22, 0.9);
-    border: 1px solid var(--line);
-    padding: 40px;
-    border-radius: 6px;
-    backdrop-filter: blur(12px);
-    width: 420px;
-    max-width: 90vw;
-    text-align: center;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-  }
-  .lobby-card h1 {
-    font-family: 'Fraunces', serif;
-    font-size: 42px;
-    color: var(--sand);
-    letter-spacing: 2px;
-    margin-bottom: 6px;
-  }
-  .lobby-card p {
-    font-size: 13px;
-    color: var(--foam-dim);
-    margin-bottom: 30px;
-  }
-  .input-group {
-    display: flex;
-    flex-direction: column;
-    text-align: left;
-    margin-bottom: 20px;
-  }
-  .input-group label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    text-transform: uppercase;
-    color: var(--sand);
-    margin-bottom: 6px;
-  }
-  .input-group input {
-    background: rgba(243,247,242,0.05);
-    border: 1px solid var(--line);
-    padding: 12px;
-    color: var(--foam);
-    font-family: inherit;
-    font-size: 14px;
-    border-radius: 4px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .input-group input:focus {
-    border-color: var(--bioglow);
-  }
-  .btn-join {
-    width: 100%;
-    background: var(--bioglow);
-    color: #050f16;
-    border: none;
-    padding: 14px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-weight: bold;
-    font-size: 14px;
-    cursor: pointer;
-    border-radius: 4px;
-    letter-spacing: 1px;
-    transition: background 0.2s;
-    margin-top: 10px;
-  }
-  .btn-join:hover {
-    background: #52d296;
-  }
-  #canvas3d {
-    display: none; 
-    width: 100vw;
-    height: 100vh;
-    position: absolute;
-    top: 0; left: 0;
-  }
-  .ui-overlay {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    pointer-events: none;
-    display: none; 
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 24px;
-    box-sizing: border-box;
-    z-index: 10;
-  }
-  .panel {
-    background: rgba(5, 15, 22, 0.85);
-    border: 1px solid var(--line);
-    padding: 16px;
-    border-radius: 4px;
-    pointer-events: auto;
-    backdrop-filter: blur(8px);
-  }
-  .top-left {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 13px;
-  }
-  .room-banner {
-    color: var(--bioglow);
-    font-size: 11px;
-    margin-bottom: 4px;
-    border-bottom: 1px dashed var(--line);
-    padding-bottom: 4px;
-  }
-  .resources-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
-    margin-top: 8px;
-  }
-  .res-item {
-    background: rgba(243,247,242,0.05);
-    padding: 4px 6px;
-    border-radius: 2px;
-    border-left: 3px solid var(--sand);
-    font-size: 10px;
-  }
-  .res-item.wood { border-left-color: #b08d57; }
-  .res-item.coral { border-left-color: var(--coral); }
-  .res-item.scrap { border-left-color: #8fa4ad; }
-  .res-item.iron { border-left-color: var(--iron-gray); }
-  .res-item.glow { border-left-color: var(--abyssal-blue); }
-  
-  .bottom-center {
-    align-self: center;
-    width: 640px;
-    max-width: 90vw;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  .crafting-title {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--foam-dim);
-    display: flex;
-    justify-content: space-between;
-  }
-  .recipe-carousel {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-  }
-  .recipe-card {
-    flex: 0 0 145px;
-    background: rgba(243,247,242,0.03);
-    border: 1px solid rgba(243,247,242,0.1);
-    padding: 10px;
-    border-radius: 3px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .recipe-card.selected {
-    background: rgba(243,247,242,0.1);
-    border-color: var(--sand);
-    transform: translateY(-2px);
-  }
-  .recipe-card.locked {
-    opacity: 0.3;
-    cursor: not-allowed;
-  }
-  .recipe-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-  .recipe-cost { font-size: 9px; font-family: 'IBM Plex Mono', monospace; color: var(--foam-dim); line-height: 1.2; }
-  
-  .status-bars {
-    position: absolute;
-    top: 24px; right: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 220px;
-  }
-  .bar-container {
-    background: rgba(0,0,0,0.4);
-    height: 18px;
-    border: 1px solid var(--line);
-    position: relative;
-  }
-  .bar-fill {
-    height: 100%;
-    transition: width 0.1s ease-out;
-  }
-  #hp-fill { background: var(--coral); width: 100%; }
-  #shield-fill { background: #45a2bf; width: 0%; }
-  #oxygen-container { display: none; }
-  #oxygen-fill { background: var(--abyssal-blue); width: 100%; }
-  .bar-label {
-    position: absolute;
-    width: 100%; height: 100%;
-    top: 0; left: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-family: 'IBM Plex Mono', monospace;
-    font-weight: bold;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-  }
-  #weapon-status-panel {
-    margin-top: 4px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    color: var(--coral);
-    text-align: right;
-  }
-  #death-screen {
-    position: absolute;
-    top:0; left:0; width:100%; height:100%;
-    background: rgba(5, 15, 22, 0.95);
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
-    z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.5s;
-  }
-  #death-screen.active { opacity: 1; pointer-events: auto; }
-  #death-screen h1 { font-family: 'Fraunces', serif; font-size: 48px; color: var(--coral); margin-bottom: 12px; }
-  #death-screen button {
-    background: transparent; border: 1px solid var(--foam); color: var(--foam);
-    padding: 10px 24px; font-family: 'IBM Plex Mono', monospace; cursor: pointer; transition: 0.2s;
-  }
-  #death-screen button:hover { background: var(--foam); color: #050f16; }
-  
-  .table-indicator { color: var(--bioglow); font-weight: bold; }
-  .table-missing { color: var(--coral); }
-  #host-badge { font-size: 11px; color: var(--sand); background: rgba(231,201,137,0.1); padding: 2px 6px; border-radius: 3px; display: inline-block; margin-top: 4px;}
-  
-  #controls-notice {
-    position: absolute;
-    top: 80px; left: 50%;
-    transform: translateX(-50%);
-    background: rgba(5,15,22,0.85);
-    border: 1px solid var(--bioglow);
-    padding: 10px 18px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-family: 'IBM Plex Mono', monospace;
-    pointer-events: none;
-    z-index: 20;
-    text-align: center;
-    line-height: 1.4;
-  }
-
-  /* --- MOBILE D-PAD & TOUCH OVERLAYS --- */
-  #mobile-dpad {
-    position: absolute;
-    bottom: 30px; left: 30px;
-    width: 140px; height: 140px;
-    display: none;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: 4px;
-    z-index: 100;
-    pointer-events: auto;
-  }
-  .dpad-btn {
-    background: rgba(5, 15, 22, 0.8);
-    border: 1px solid var(--line);
-    color: var(--foam);
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 16px; font-weight: bold;
-    user-select: none; -webkit-user-select: none;
-  }
-  .dpad-btn:active {
-    background: var(--bioglow);
-    color: #050f16;
-  }
-  #mobile-actions {
-    position: absolute;
-    bottom: 30px; right: 30px;
-    display: none;
-    flex-direction: column;
-    gap: 8px;
-    z-index: 100;
-    pointer-events: auto;
-  }
-  .action-btn {
-    background: rgba(5, 15, 22, 0.8);
-    border: 1px solid var(--sand);
-    color: var(--sand);
-    padding: 12px 18px;
-    border-radius: 4px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px; font-weight: bold;
-    text-align: center;
-  }
-  .action-btn:active {
-    background: var(--sand);
-    color: #050f16;
-  }
-  .action-btn.deploy-btn {
-    border-color: var(--bioglow);
-    color: var(--bioglow);
-    padding: 16px 20px;
-    font-size: 14px;
-  }
-  .action-btn.deploy-btn:active {
-    background: var(--bioglow);
-    color: #050f16;
-  }
-</style>
+  :root{\n    --abyss:#0c1f2d;\n    --tide-navy:#123a3e;\n    --lagoon:#1f5f63;\n    --sand:#e7c989;\n    --coral:#ff6b4a;\n    --bioglow:#6ef2b0;\n    --abyssal-blue:#3a86ff;\n    --iron-gray:#a1a1a6;\n    --foam:#f3f7f2;\n    --foam-dim:rgba(243,247,242,0.15);\n    --depth-panel:rgba(12,31,45,0.85);\n  }\n\n  *{\n    margin:0; padding:0; box-sizing:border-box;\n    font-family:'Inter', sans-serif;\n    user-select:none; -webkit-user-select:none;\n  }\n\n  body, html {\n    background-color: var(--abyss);\n    color: var(--foam);\n    width:100%; height:100%;\n    overflow:hidden;\n  }\n\n  /* LANDING SPLASH LAYOUT */\n  #landing-page {\n    position: fixed; inset:0; z-index:9999;\n    background: radial-gradient(circle at center, var(--tide-navy) 0%, var(--abyss) 100%);\n    display:flex; flex-direction:column; align-items:center; justify-content:center;\n    padding:20px; text-align:center;\n    transition: opacity 0.5s ease;\n  }\n  \n  .splash-logo {\n    font-family: 'Fraunces', serif;\n    font-size: 4rem; font-weight:300; letter-spacing:-0.03em;\n    color: var(--sand); margin-bottom:10px;\n    text-shadow: 0 4px 20px rgba(231,201,137,0.2);\n  }\n\n  .splash-tagline {\n    font-size:1.1rem; color: var(--bioglow);\n    font-family:'IBM Plex Mono', monospace; margin-bottom:40px;\n    text-transform:uppercase; letter-spacing:0.1em;\n  }\n\n  .login-card {\n    background: var(--depth-panel); border: 1px solid var(--lagoon);\n    padding:30px; border-radius:16px; width:100%; max-width:400px;\n    box-shadow: 0 20px 50px rgba(0,0,0,0.5);\n    backdrop-filter: blur(10px);\n  }\n\n  .form-group {\n    margin-bottom:20px; text-align:left;\n  }\n  \n  .form-group label {\n    display:block; font-size:0.8rem; text-transform:uppercase;\n    letter-spacing:0.05em; margin-bottom:8px; color: var(--iron-gray);\n    font-family:'IBM Plex Mono', monospace;\n  }\n\n  .form-group input {\n    width:100%; background: rgba(0,0,0,0.3); border:1px solid var(--lagoon);\n    padding:12px 16px; border-radius:8px; color:var(--foam);\n    font-size:1rem; outline:none; transition: border-color 0.2s;\n  }\n  .form-group input:focus { border-color: var(--bioglow); }\n\n  .connect-btn {\n    width:100%; background: var(--coral); color:var(--foam);\n    border:none; padding:14px; font-size:1.1rem; font-weight:600;\n    border-radius:8px; cursor:pointer; transition: transform 0.1s, background-color 0.2s;\n    box-shadow: 0 4px 15px rgba(255,107,74,0.3);\n  }\n  .connect-btn:hover { background-color: #ff8164; }\n  .connect-btn:active { transform: scale(0.98); }\n\n  /* MAIN HUD MATRIX */\n  #canvas3d {\n    display:none; width:100%; height:100%; background-color:#020a10;\n  }\n\n  #game-ui {\n    display:none; position:fixed; inset:0; pointer-events:none;\n    flex-direction:column; justify-content:space-between; padding:20px;\n    z-index:100;\n  }\n\n  .interactive { pointer-events: auto; }\n\n  .top-hud-bar {\n    display:flex; justify-content:space-between; align-items:flex-start; width:100%;\n  }\n\n  .status-vitals {\n    background: var(--depth-panel); border-left:4px solid var(--bioglow);\n    padding:15px; border-radius: 0 12px 12px 0; width:260px;\n    box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  }\n\n  .vital-row { margin-bottom:10px; }\n  .vital-row:last-child { margin-bottom:0; }\n  .vital-meta { display:flex; justify-content:space-between; font-size:0.75rem; font-family:'IBM Plex Mono', monospace; margin-bottom:4px; color:var(--iron-gray); }\n  .vital-meta span.val { color: var(--foam); font-weight:600; }\n  \n  .bar-container { width:100%; height:8px; background: rgba(243,247,242,0.1); border-radius:4px; overflow:hidden; }\n  .bar-fill { height:100%; width:100%; transition: width 0.2s ease-out; }\n  .bg-hp { background: var(--coral); }\n  .bg-shield { background: var(--abyssal-blue); }\n  .bg-o2 { background: var(--bioglow); }\n\n  .room-banner {\n    background: var(--depth-panel); border:1px solid var(--lagoon);\n    padding:10px 20px; border-radius:30px; font-family:'IBM Plex Mono', monospace;\n    font-size:0.85rem; letter-spacing:0.05em; color:var(--sand);\n    box-shadow: 0 4px 20px rgba(0,0,0,0.3);\n  }\n  \n  #host-badge {\n    font-size:0.7rem; display:block; color:var(--iron-gray); text-align:center; margin-top:2px;\n  }\n\n  .right-inventory {\n    background: var(--depth-panel); padding:15px; border-radius:12px;\n    border:1px solid rgba(243,247,242,0.08); width:180px;\n    box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  }\n  .inv-title {\n    font-family:'IBM Plex Mono', monospace; font-size:0.75rem; color:var(--iron-gray);\n    border-bottom:1px solid rgba(243,247,242,0.1); padding-bottom:6px; margin-bottom:8px;\n    text-transform:uppercase; letter-spacing:0.05em;\n  }\n  .inv-grid { display:grid; grid-template-columns: 1fr; gap:6px; }\n  .inv-item { display:flex; justify-content:space-between; font-size:0.85rem; font-family:'IBM Plex Mono', monospace; }\n  .inv-label { color: var(--iron-gray); }\n  .inv-qty { color: var(--sand); font-weight:600; }\n\n  .bottom-matrix-controls {\n    display:flex; justify-content:space-between; align-items:flex-end; width:100%;\n  }\n\n  .radial-crafting {\n    background: var(--depth-panel); padding:15px; border-radius:16px;\n    border:1px solid var(--lagoon); width:320px;\n    box-shadow: 0 15px 40px rgba(0,0,0,0.4);\n  }\n  .craft-header {\n    font-size:0.8rem; font-family:'IBM Plex Mono', monospace; color:var(--bioglow);\n    margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;\n  }\n  .craft-options {\n    display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:10px;\n  }\n  .craft-btn {\n    background: rgba(0,0,0,0.4); border:1px solid var(--lagoon);\n    border-radius:8px; padding:10px 4px; color:var(--foam); cursor:pointer;\n    display:flex; flex-direction:column; align-items:center; transition: all 0.2s;\n  }\n  .craft-btn:hover { background: rgba(31,95,99,0.3); border-color:var(--bioglow); }\n  .craft-btn.active { background: var(--lagoon); border-color:var(--bioglow); box-shadow:0 0 10px rgba(110,242,176,0.2); }\n  .craft-icon { font-size:1.2rem; margin-bottom:2px; }\n  .craft-name { font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.02em; }\n  .craft-cost { font-size:0.6rem; color: var(--iron-gray); font-family:'IBM Plex Mono', monospace; margin-top:1px; }\n\n  #crafting-instructions {\n    font-size:0.65rem; color: var(--sand); font-style:italic; text-align:center;\n  }\n\n  .environment-card {\n    background: var(--depth-panel); padding:12px 20px; border-radius:12px;\n    text-align:right; font-family:'IBM Plex Mono', monospace;\n    box-shadow: 0 10px 30px rgba(0,0,0,0.3);\n  }\n  .env-time { font-size:1.1rem; font-weight:600; color: var(--foam); }\n  .env-day { font-size:0.75rem; color: var(--bioglow); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px; }\n\n  /* TOUCH DISPLAY OVERLAYS */\n  #mobile-dpad {\n    display:none; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px);\n    gap:6px; margin-left:10px; margin-bottom:10px;\n  }\n  .dpad-btn {\n    background: rgba(12,31,45,0.75); border:1px solid var(--lagoon); border-radius:10px;\n    color:var(--foam); display:flex; align-items:center; justify-content:center;\n    font-size:1.2rem; font-weight:bold; cursor:pointer;\n  }\n  .dpad-btn:active { background: var(--lagoon); }\n\n  #mobile-actions {\n    display:none; flex-direction:column; gap:10px; margin-right:10px; margin-bottom:10px;\n  }\n  .action-circle {\n    width:65px; height:65px; border-radius:50%; background: rgba(255,107,74,0.85);\n    border:2px solid var(--foam); color:var(--foam); font-weight:bold;\n    display:flex; align-items:center; justify-content:center; font-size:0.9rem;\n    box-shadow:0 6px 20px rgba(0,0,0,0.4); cursor:pointer;\n    text-transform:uppercase;\n  }\n  .action-circle:active { transform:scale(0.95); background: var(--coral); }\n  .action-circle.build-mode { background: rgba(58,134,255,0.85); }\n\n  /* GAME OVER MODAL */\n  #death-screen {\n    position:fixed; inset:0; background:rgba(12,5,5,0.9); z-index:10000;\n    display:none; flex-direction:column; align-items:center; justify-content:center; padding:20px;\n  }\n  #death-screen.active { display:flex; }\n  .death-title { font-family:'Fraunces', serif; font-size:3.5rem; color:var(--coral); margin-bottom:15px; }\n  .death-body { font-size:1.1rem; color:var(--iron-gray); margin-bottom:30px; font-family:'IBM Plex Mono', monospace; }\n  .respawn-btn { background:var(--sand); color:var(--abyss); font-weight:bold; border:none; padding:14px 40px; font-size:1rem; border-radius:8px; cursor:pointer; text-transform:uppercase; letter-spacing:0.05em; }\n  .respawn-btn:hover { background:#f5ddaa; }\n\n  .game-hint {\n    position:fixed; bottom:185px; left:50%; transform:translateX(-50%);\n    background:rgba(0,0,0,0.6); color:var(--iron-gray); font-size:0.75rem;\n    padding:6px 16px; border-radius:20px; white-space:nowrap; pointer-events:none;\n    border:1px solid rgba(243,247,242,0.05);\n  }\n\n  @media(max-width:768px){\n    .top-hud-bar { flex-direction:column; gap:10px; align-items:center; }\n    .status-vitals { width:100%; border-radius:12px; border-left:none; border-top:4px solid var(--bioglow); }\n    .right-inventory { width:100%; display:flex; flex-direction:column; }\n    .inv-grid { grid-template-columns: repeat(3, 1fr); gap:10px; }\n    .bottom-matrix-controls { flex-direction:column-reverse; align-items:center; gap:15px; }\n    .radial-crafting { width:100%; }\n    .environment-card { width:100%; text-align:center; }\n    .game-hint { display:none; }\n  }\n</style>
 </head>
 <body>
 
 <div id="landing-page">
-  <div class="lobby-card">
-    <h1>ATOLL 3D</h1>
-    <p>3D Third-Person High-Visibility Oceanic Node</p>
-    <div class="input-group">
-      <label for="username">Identity Tag Name</label>
-      <input type="text" id="username" placeholder="e.g., AtollScout_7" maxlength="14">
+  <div class="splash-logo">ATOLL 3D</div>
+  <div class="splash-tagline">Oceanic Grid Network Protocol</div>
+  
+  <div class="login-card">
+    <div class="form-group">
+      <label for="username">Mariner Call-Sign / Name</label>
+      <input type="text" id="username" placeholder="Enter identification..." maxlength="12">
     </div>
-    <div class="input-group">
+    <div class="form-group">
       <label for="room-id">Shared Network Hub Room ID</label>
       <input type="text" id="room-id" value="atoll-oceanic-grid" placeholder="e.g., sector-7" maxlength="20">
     </div>
-    <button class="btn-join" onclick="initiateGameConnection()">CONNECT TO REEF RADIAL</button>
-  </div>
-</div>
-
-<div id="canvas3d"></div>
-<div id="controls-notice">
-  Left-click and Drag screen to orbit camera view<br>
-  [W][A][S][D] to Move character relative to look direction | [Left Click] anywhere when armed to fire
-</div>
-
-<div id="mobile-dpad">
-  <div></div>
-  <div class="dpad-btn" id="btn-up">W</div>
-  <div></div>
-  <div class="dpad-btn" id="btn-left">A</div>
-  <div class="dpad-btn" style="background:transparent; border:none; opacity:0.3;">✛</div>
-  <div class="dpad-btn" id="btn-right">D</div>
-  <div></div>
-  <div class="dpad-btn" id="btn-down">S</div>
-  <div></div>
-</div>
-
-<div id="mobile-actions">
-  <div style="display:flex; gap:6px;">
-    <div class="action-btn" id="btn-prev-recipe">◂ PREV</div>
-    <div class="action-btn" id="btn-next-recipe">NEXT ▸</div>
-  </div>
-  <div class="action-btn deploy-btn" id="btn-deploy">DEPLOY / CRAFT</div>
-</div>
-
-<div class="ui-overlay" id="game-ui">
-  <div class="panel top-left">
-    <div class="room-banner">GRID HUB: <span id="ui-room-name">...</span></div>
-    <div>CYCLE STAGE: <span id="ui-day">1</span> (<span id="ui-phase">DAYLIGHT</span>)</div>
-    <div>TIDE SEQUENCE: <span id="ui-timer">30</span>s</div>
-    <div id="host-badge">Role: Syncing...</div>
-    <div class="resources-grid">
-      <div class="res-item wood">Wood: <span id="res-wood">0</span></div>
-      <div class="res-item coral">Coral: <span id="res-coral">0</span></div>
-      <div class="res-item scrap">Ore: <span id="res-scrap">0</span></div>
-      <div class="res-item iron">Iron: <span id="res-iron">0</span></div>
-      <div class="res-item glow">Glow: <span id="res-glow">0</span></div>
-    </div>
-  </div>
-
-  <div class="status-bars">
-    <div class="bar-container">
-      <div id="hp-fill" class="bar-fill"></div>
-      <div class="bar-label">VITALS: <span id="lbl-hp">100</span>/100</div>
-    </div>
-    <div class="bar-container">
-      <div id="shield-fill" class="bar-fill"></div>
-      <div class="bar-label">SHIELD CORE: <span id="lbl-shield">0</span>/100</div>
-    </div>
-    <div class="bar-container" id="oxygen-container">
-      <div id="oxygen-fill" class="bar-fill"></div>
-      <div class="bar-label">OXYGEN MATRIX: <span id="lbl-oxygen">100</span>%</div>
-    </div>
-    <div id="weapon-status-panel">WEAPON STATUS: UNARMED</div>
-  </div>
-
-  <div class="panel bottom-center">
-    <div class="crafting-title">
-      <span id="crafting-instructions">Radial Schematics ([Q]/[E] to scroll, [Space] to deploy / craft)</span>
-      <span id="proximity-status" class="table-missing">Workbench Out of Range</span>
-    </div>
-    <div class="recipe-carousel" id="recipe-list"></div>
+    <button class="connect-btn interactive" onclick="initiateGameConnection()">INITIALIZE GRID</button>
   </div>
 </div>
 
 <div id="death-screen">
-  <h1>Structure Submerged</h1>
-  <p style="margin-bottom:24px; font-family:'IBM Plex Mono'; color: var(--foam-dim);">Survival span: <span id="death-days">0</span> cycles.</p>
-  <button onclick="resetGame()">RE-INITIALIZE GRID</button>
+  <div class="death-title">Grid Synchronization Lost</div>
+  <div class="death-body">Your vital link dissolved on Day <span id="death-days">1</span>.</div>
+  <button class="respawn-btn" onclick="resetGame()">Re-Anchor Entity</button>
 </div>
 
-<script>
-// --- INTERNET MULTIPLAYER LAYER CORE ---
-// Import the official Supabase Client JS Engine
-</script>
+<div id="canvas3d"></div>
+
+<div id="game-ui">
+  <div class="top-hud-bar">
+    <div class="status-vitals">
+      <div class="vital-row">
+        <div class="vital-meta"><span>VITALITY QUANTUM</span><span id="ui-hp" class="val">100%</span></div>
+        <div class="bar-container"><div id="fill-hp" class="bar-fill bg-hp"></div></div>
+      </div>
+      <div class="vital-row">
+        <div class="vital-meta"><span>SHIELD CAPACITANCE</span><span id="ui-shield" class="val">0%</span></div>
+        <div class="bar-container"><div id="fill-shield" class="bar-fill bg-shield"></div></div>
+      </div>
+      <div class="vital-row">
+        <div class="vital-meta"><span>OXYGEN PRESSURE</span><span id="ui-oxygen" class="val">100%</span></div>
+        <div class="bar-container"><div id="fill-oxygen" class="bar-fill bg-o2"></div></div>
+      </div>
+    </div>
+
+    <div class="room-banner">
+      GRID HUB: <span id="ui-room-name">...</span>
+      <span id="host-badge">Role: Evaluating Grid Position...</span>
+    </div>
+
+    <div class="right-inventory">
+      <div class="inv-title">Cargo Matrix</div>
+      <div class="inv-grid">
+        <div class="inv-item"><span class="inv-label">Wood / Kelp</span><span id="inv-wood" class="inv-qty">0</span></div>
+        <div class="inv-item"><span class="inv-label">Coral Ore</span><span id="inv-coral" class="inv-qty">0</span></div>
+        <div class="inv-item"><span class="inv-label">Metal Scrap</span><span id="inv-scrap" class="inv-qty">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-matrix-controls">
+    <div id="mobile-dpad" class="interactive">
+      <div></div><div class="dpad-btn" id="dpad-u">▲</div><div></div>
+      <div class="dpad-btn" id="dpad-l">◀</div><div></div><div class="dpad-btn" id="dpad-r">▶</div>
+      <div></div><div class="dpad-btn" id="dpad-d">▼</div><div></div>
+    </div>
+
+    <div class="radial-crafting interactive">
+      <div class="craft-header">Nanite Schematic Fabricator</div>
+      <div class="craft-options">
+        <div class="craft-btn active" id="btn-sch-none" onclick="selectSchematic('none')">
+          <span class="craft-icon">👁</span><span class="craft-name">Observe</span><span class="craft-cost">Free</span>
+        </div>
+        <div class="craft-btn" id="btn-sch-wall" onclick="selectSchematic('wall')">
+          <span class="craft-icon">🛑</span><span class="craft-name">Alloy Wall</span><span class="craft-cost">4 Wd, 2 Crl</span>
+        </div>
+        <div class="craft-btn" id="btn-sch-table" onclick="selectSchematic('crafting_table')">
+          <span class="craft-icon">🔋</span><span class="craft-name">Pylon Lab</span><span class="craft-cost">8 Wd, 4 Crl</span>
+        </div>
+      </div>
+      <div id="crafting-instructions">Observe Mode: Click / Tap anywhere on the island mesh to travel safely.</div>
+    </div>
+
+    <div id="mobile-actions" class="interactive">
+      <div class="action-circle build-mode" id="m-action-build">Build</div>
+      <div class="action-circle" id="m-action-fire">Fire</div>
+    </div>
+
+    <div class="environment-card">
+      <div id="ui-time" class="env-time">08:00</div>
+      <div id="ui-day" class="env-day">SOLAR SECTOR 01</div>
+    </div>
+  </div>
+
+  <div class="game-hint">Click or tap the island to walk. Walk over resources to gather. Arrow keys / WASD also work. Wall up before dark.</div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-
-// Explicitly bind your custom project credentials
+// --- INTERNET MULTIPLAYER LAYER CORE ---
 window.ATOLL_SUPABASE_URL = "https://ndjgohctnkpmlawaznjf.supabase.co";
 window.ATOLL_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kamdvaGN0bmtwbWxhd2F6bmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTY2MzMsImV4cCI6MjA5OTE5MjYzM30.HEdfZcFIFqwDCQ85sUkbeO40uA2PyVvKL8x84LPYunk";
 
@@ -455,23 +118,20 @@ let chosenName = 'Mariner';
 window.playerId = 'p_' + Math.random().toString(36).substr(2, 9);
 const sessionStartTime = Date.now();
 
-// Instantiate the dedicated cloud client
 const supabaseClient = window.supabase.createClient(window.ATOLL_SUPABASE_URL, window.ATOLL_SUPABASE_ANON_KEY);
 let realtimeChannel = null;
 
 let remotePlayersData = {}; 
 let isHost = true; 
 let roomPeers = {};
-let lastBroadcastTime = 0; // Throttle timestamp tracker
+let lastBroadcastTime = 0; 
 
-// Robust Touch / iPadOS Device Check
 const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
 
 function setupMultiplayerChannel() {
   console.log("Connecting to Supabase Realtime Hub Room:", multiplayerRoomId);
   document.getElementById('host-badge').innerText = "Role: Synchronizing Channel...";
   
-  // Create a fast, low-latency Broadcast & Presence Channel mapped to your room name
   realtimeChannel = supabaseClient.channel(`room_${multiplayerRoomId}`, {
     config: {
       broadcast: { self: false },
@@ -479,7 +139,6 @@ function setupMultiplayerChannel() {
     }
   });
 
-  // Wire up incoming WebSocket packet handlers
   realtimeChannel
     .on('broadcast', { event: 'game_event' }, ({ payload: msg }) => {
       if (!msg || msg.id === window.playerId) return;
@@ -502,6 +161,18 @@ function setupMultiplayerChannel() {
           determineHostRole();
         }
       } 
+      else if (msg.type === 'build') {
+        const geometry = msg.structureType === 'wall' ? new THREE.BoxGeometry(3, 3, 0.8) : new THREE.CylinderGeometry(1, 1.2, 4, 6);
+        const material = new THREE.MeshStandardMaterial({ 
+          color: msg.structureType === 'wall' ? 0x2c3e50 : 0x1f5f63, 
+          roughness: 0.4, 
+          metalness: 0.8 
+        });
+        const structMesh = new THREE.Mesh(geometry, material);
+        structMesh.position.set(msg.x, msg.structureType === 'wall' ? 1.5 : 2, msg.z);
+        scene.add(structMesh);
+        structures.push({ type: msg.structureType, x: msg.x, z: msg.z, mesh: structMesh });
+      }
       else if (msg.type === 'ping') {
         roomPeers[msg.id] = msg.sessionStartTime;
         determineHostRole();
@@ -522,11 +193,9 @@ function setupMultiplayerChannel() {
     .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         document.getElementById('host-badge').innerText = "Role: Connected to Supabase Engine";
-        // Transmit an initial arrival announcement down the wire
         sendNetworkPacket({ type: 'ping', id: window.playerId, sessionStartTime });
       }
       
-      // AUTO-RECONNECT LOGIC: Catch drops or size breaks and rejoin safely
       if (status === 'TIMED_OUT' || status === 'CLOSED') {
         document.getElementById('host-badge').innerText = "Connection lost. Reconnecting...";
         console.warn("Supabase Realtime socket dropped. Reconnecting channel...");
@@ -539,8 +208,6 @@ function setupMultiplayerChannel() {
 
 function sendNetworkPacket(payload) {
   if (!realtimeChannel) return;
-  
-  // Forward game metrics smoothly across players via Broadcast
   realtimeChannel.send({
     type: 'broadcast',
     event: 'game_event',
@@ -561,7 +228,6 @@ function determineHostRole() {
 function broadcastLocalState() {
   if (!player || !player.mesh) return;
   
-  // THROTTLE LOGIC: Restrict rendering-loop updates to a maximum of 20 ticks per second (every 50ms)
   const now = Date.now();
   if (now - lastBroadcastTime < 50) return;
   lastBroadcastTime = now;
@@ -594,7 +260,6 @@ function initiateGameConnection() {
     document.getElementById('canvas3d').style.display = 'block';
     document.getElementById('game-ui').style.display = 'flex';
     
-    // UI Layout adaptations if playing via Touch Interface / iPad
     if (isTouchDevice) {
       document.getElementById('mobile-dpad').style.display = 'grid';
       document.getElementById('mobile-actions').style.display = 'flex';
@@ -606,586 +271,583 @@ function initiateGameConnection() {
     init3DEngine();
   }, 500);
 }
+
 // --- 3D ENGINE CONFIGURATION (HIGH VISIBILITY / THIRD PERSON) ---
 let scene, camera, renderer;
 let gameActive = false, lastTime = 0;
 
-let inventory = { wood: 12, coral: 6, scrap: 0, iron: 0, glow: 0 };
-let craftedWeapons = { spear: false, blaster: false };
+let inventory = { wood: 12, coral: 6, scrap: 0 };
+let currentSchematic = 'none'; 
 
-const recipes = [
-  { id: 'crafting_table', name: 'Crafting Table', type: 'structure', cost: { wood: 4, coral: 0, scrap: 0, iron: 0, glow: 0 }, requiresTable: false, color: 0xaa7a44, height: 1.5 },
-  { id: 'wood_wall',     name: 'Driftwood Wall',  type: 'structure', cost: { wood: 3, coral: 0, scrap: 0, iron: 0, glow: 0 }, requiresTable: false, color: 0x826642, height: 3.5 },
-  { id: 'shield_pylon',  name: 'Shield Pylon',    type: 'structure', cost: { wood: 5, coral: 5, scrap: 2, iron: 0, glow: 0 }, requiresTable: true,  color: 0x45a2bf, height: 4.5 },
-  { id: 'oxygen_sub',    name: 'O2 Substation',   type: 'structure', cost: { wood: 4, coral: 2, scrap: 0, iron: 3, glow: 0 }, requiresTable: true,  color: 0x3a86ff, height: 2.5 },
-  { id: 'harpoon_spear', name: 'Harpoon Launcher',type: 'weapon',    cost: { wood: 6, coral: 0, scrap: 4, iron: 2, glow: 0 }, requiresTable: true,  color: 0xf59e0b, weaponId: 'spear' },
-  { id: 'abyss_blaster', name: 'Abyssal Blaster', type: 'weapon',    cost: { wood: 0, coral: 4, scrap: 2, iron: 6, glow: 5 }, requiresTable: true,  color: 0xa855f7, weaponId: 'blaster' }
-];
-
-let buildIndex = 0, isNearTable = false;
-const islandRadius = 130; 
-
-let player = { 
-  x: 0, z: 0, y: 1.0, 
-  camAngle: 0, camPitch: 0.5, camRadius: 28,
-  hp: 100, maxHp: 100, shield: 0, maxShield: 100, oxygen: 100, maxOxygen: 100, 
-  speed: 24, mesh: null,
-  color: '#' + Math.floor(Math.random()*16777215).toString(16) 
+let player = {
+  x: 0, z: 0,
+  hp: 100, maxHp: 100,
+  shield: 0, maxShield: 100,
+  oxygen: 100, maxOxygen: 100,
+  color: '#' + Math.floor(Math.random()*16777215).toString(16),
+  mesh: null,
+  targetX: 0, targetZ: 0, isMovingToTarget: false,
+  camAngle: 0, camPitch: 0.5, camRadius: 28
 };
 
-let input = { w: false, a: false, s: false, d: false };
-let isDraggingCamera = false, prevMouseX = 0, prevMouseY = 0;
+let remotePlayers = {}; 
+let structures = []; 
+let resources = [];  
+let enemies = [];    
+let projectiles = []; 
 
-let resources = [], structures = [], enemies = [], projectiles = [];
-let remotePlayerMeshes = {};
-let cycleTime = 0; const phaseDuration = 30; let currentDay = 1, isNight = false;
+let cycleTime = 240; 
+let isNight = false;
+let currentDay = 1;
+let directionalLight, ambientLight;
 
-let oceanFloor, islandMesh, ambientLight, directionalLight;
+const ISLAND_RADIUS = 75;
 
 function init3DEngine() {
   const container = document.getElementById('canvas3d');
-  
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0e2637); 
-  scene.fog = new THREE.FogExp2(0x0e2637, 0.007); 
+  scene.background = new THREE.Color(0x020a10);
+  scene.fog = new THREE.FogExp2(0x020a10, 0.015);
 
-  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-
+  camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+  
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
 
-  ambientLight = new THREE.AmbientLight(0x285973, 1.8);
+  ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
   scene.add(ambientLight);
 
-  directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
-  directionalLight.position.set(40, 120, 30);
+  directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  directionalLight.position.set(40, 60, 20);
+  directionalLight.castShadow = true;
+  directionalLight.shadow.mapSize.width = 1024;
+  directionalLight.shadow.mapSize.height = 1024;
+  directionalLight.shadow.camera.near = 0.5;
+  directionalLight.shadow.camera.far = 200;
+  let d = 80;
+  directionalLight.shadow.camera.left = -d;
+  directionalLight.shadow.camera.right = d;
+  directionalLight.shadow.camera.top = d;
+  directionalLight.shadow.camera.bottom = -d;
   scene.add(directionalLight);
 
-  const floorGeo = new THREE.PlaneGeometry(1500, 1500);
-  const floorMat = new THREE.MeshStandardMaterial({ color: 0x071520, roughness: 0.8 });
-  oceanFloor = new THREE.Mesh(floorGeo, floorMat);
-  oceanFloor.rotation.x = -Math.PI / 2;
-  scene.add(oceanFloor);
+  buildIslandTerrain();
+  createLocalPlayerMesh();
 
-  const islandGeo = new THREE.CylinderGeometry(islandRadius, islandRadius, 0.6, 48);
-  const islandMat = new THREE.MeshStandardMaterial({ color: 0x225d5d, roughness: 0.7 });
-  islandMesh = new THREE.Mesh(islandGeo, islandMat);
-  islandMesh.position.y = 0.3;
-  scene.add(islandMesh);
+  if (isHost) {
+    initResources();
+  }
 
-  const pGroup = new THREE.Group();
-  const bodyGeo = new THREE.ConeGeometry(1.2, 2.5, 4);
-  bodyGeo.rotateX(Math.PI / 2); 
-  const bodyMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(player.color), roughness: 0.4 });
-  const pBody = new THREE.Mesh(bodyGeo, bodyMat);
-  pGroup.add(pBody);
-  
-  const indGeo = new THREE.ConeGeometry(0.4, 0.8, 4);
-  indGeo.rotateX(Math.PI / 2);
-  const indMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const pInd = new THREE.Mesh(indGeo, indMat);
-  pInd.position.set(0, 0, 1.3);
-  pGroup.add(pInd);
-
-  pGroup.position.set(player.x, player.y, player.z);
-  scene.add(pGroup);
-  player.mesh = pGroup;
+  window.addEventListener('resize', onWindowResize);
+  setupInputHandlers();
 
   gameActive = true;
-  window.addEventListener('resize', onWindowResize);
-  setupThirdPersonControls();
-  setupMobileTouchEvents();
-
-  if (isHost) initResources();
-  setupUI();
-  updateUI();
-  
   lastTime = performance.now();
-  requestAnimationFrame(tick3D);
+  requestAnimationFrame(gameLoop);
 }
 
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+function buildIslandTerrain() {
+  const floorGeo = new THREE.PlaneGeometry(1000, 1000);
+  const floorMat = new THREE.MeshBasicMaterial({ color: 0x010508 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -1.0;
+  scene.add(floor);
+
+  const islandGeo = new THREE.CylinderGeometry(ISLAND_RADIUS, ISLAND_RADIUS + 5, 4, 32);
+  const islandMat = new THREE.MeshStandardMaterial({ color: 0x1a3322, roughness: 0.9, metalness: 0.1 });
+  const island = new THREE.Mesh(islandGeo, islandMat);
+  island.position.y = -1;
+  island.receiveShadow = true;
+  scene.add(island);
+
+  const gridHelper = new THREE.GridHelper(ISLAND_RADIUS * 2, 30, 0x1f5f63, 0x112d30);
+  gridHelper.position.y = 1.02;
+  scene.add(gridHelper);
 }
 
-function setupThirdPersonControls() {
-  window.addEventListener('mousedown', (e) => {
-    if(!gameActive) return;
-    if (e.button === 0) { 
-      isDraggingCamera = true;
-      prevMouseX = e.clientX;
-      prevMouseY = e.clientY;
-    }
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (!isDraggingCamera || !gameActive) return;
-    let deltaX = e.clientX - prevMouseX;
-    let deltaY = e.clientY - prevMouseY;
-    prevMouseX = e.clientX;
-    prevMouseY = e.clientY;
-
-    player.camAngle += deltaX * 0.007;
-    player.camPitch += deltaY * 0.007;
-    player.camPitch = Math.max(0.1, Math.min(Math.PI / 2.3, player.camPitch)); 
-  });
-
-  window.addEventListener('mouseup', (e) => {
-    if(e.button === 0) isDraggingCamera = false;
-  });
+function createLocalPlayerMesh() {
+  const group = new THREE.Group();
   
-  window.addEventListener('click', (e) => {
-    if(isTouchDevice) return; // Managed separately via touch taps to avoid double triggers
-    firePlayerProjectile();
-  });
-}
+  const bodyGeo = new THREE.CylinderGeometry(0.8, 0.8, 2.4, 8);
+  const bodyMat = new THREE.MeshStandardMaterial({ color: player.color, roughness: 0.4 });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 1.2;
+  body.castShadow = true;
+  group.add(body);
 
-function firePlayerProjectile() {
-  if(!gameActive || !player.mesh) return;
-  if (!craftedWeapons.spear && !craftedWeapons.blaster) return;
-  
-  let lookAngle = player.mesh.rotation.y;
-  let vx = Math.sin(lookAngle);
-  let vz = Math.cos(lookAngle);
+  const headGeo = new THREE.SphereGeometry(0.5, 8, 8);
+  const headMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee });
+  const head = new THREE.Mesh(headGeo, headMat);
+  head.position.y = 2.7;
+  group.add(head);
 
-  let pSpeed = craftedWeapons.blaster ? 60 : 40;
-  let pDamage = craftedWeapons.blaster ? 30 : 14;
-  let pColor = craftedWeapons.blaster ? 0xa855f7 : 0xf59e0b;
-  let pRadius = craftedWeapons.blaster ? 0.3 : 0.15;
+  const visorGeo = new THREE.BoxGeometry(0.6, 0.2, 0.4);
+  const visorMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+  const visor = new THREE.Mesh(visorGeo, visorMat);
+  visor.position.set(0, 2.7, 0.4);
+  group.add(visor);
 
-  let geo = new THREE.SphereGeometry(pRadius, 8, 8);
-  let mat = new THREE.MeshBasicMaterial({ color: pColor });
-  let mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(player.x, player.y + 0.5, player.z);
-  scene.add(mesh);
-
-  projectiles.push({
-    x: player.x, y: player.y + 0.5, z: player.z,
-    vx: vx * pSpeed, vy: 0, vz: vz * pSpeed,
-    damage: pDamage, range: 65, traveled: 0, mesh
-  });
-}
-
-// --- SPECIFIC MOBILE/TOUCH BINDINGS FOR CAMERA & HUD ---
-function setupMobileTouchEvents() {
-  if(!isTouchDevice) return;
-
-  // Orbit camera drag mapping for touches
-  window.addEventListener('touchstart', (e) => {
-    if(!gameActive) return;
-    // Don't interrupt interactions targets belonging to the mobile control pads
-    if(e.target.closest('#mobile-dpad') || e.target.closest('#mobile-actions') || e.target.closest('.recipe-card')) return;
-
-    let touch = e.touches[0];
-    isDraggingCamera = true;
-    prevMouseX = touch.clientX;
-    prevMouseY = touch.clientY;
-
-    // Multi-touch tracking: If a second finger touches while orbiting, fire weapon
-    if (e.touches.length > 1) {
-      firePlayerProjectile();
-    }
-  }, { passive: true });
-
-  window.addEventListener('touchmove', (e) => {
-    if (!isDraggingCamera || !gameActive) return;
-    let touch = e.touches[0];
-    let deltaX = touch.clientX - prevMouseX;
-    let deltaY = touch.clientY - prevMouseY;
-    prevMouseX = touch.clientX;
-    prevMouseY = touch.clientY;
-
-    player.camAngle += deltaX * 0.006;
-    player.camPitch += deltaY * 0.006;
-    player.camPitch = Math.max(0.1, Math.min(Math.PI / 2.3, player.camPitch));
-  }, { passive: true });
-
-  window.addEventListener('touchend', (e) => {
-    if(e.touches.length === 0) isDraggingCamera = false;
-  });
-
-  // Attach touch input routing for visible virtual HUD elements
-  const configureMobileBtn = (id, property) => {
-    const element = document.getElementById(id);
-    element.addEventListener('touchstart', (e) => { e.preventDefault(); input[property] = true; });
-    element.addEventListener('touchend', (e) => { e.preventDefault(); input[property] = false; });
-  };
-
-  configureMobileBtn('btn-up', 'w');
-  configureMobileBtn('btn-down', 's');
-  configureMobileBtn('btn-left', 'a');
-  configureMobileBtn('btn-right', 'd');
-
-  document.getElementById('btn-prev-recipe').addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    buildIndex = (buildIndex - 1 + recipes.length) % recipes.length;
-    updateUI();
-  });
-
-  document.getElementById('btn-next-recipe').addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    buildIndex = (buildIndex + 1) % recipes.length;
-    updateUI();
-  });
-
-  document.getElementById('btn-deploy').addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    attemptBuildOrCraft();
-  });
+  scene.add(group);
+  player.mesh = group;
 }
 
 function initResources() {
   resources.forEach(r => { if(r.mesh) scene.remove(r.mesh); });
   resources = [];
-  for(let i=0; i<16; i++) spawnResourceHost('wood', false); 
-  for(let i=0; i<10; i++) spawnResourceHost('coral', false); 
-  for(let i=0; i<6; i++) spawnResourceHost('scrap', false); 
-  for(let i=0; i<10; i++) spawnResourceHost('iron', true); 
-  for(let i=0; i<8; i++) spawnResourceHost('glow', true); 
+  
+  for (let i = 0; i < 25; i++) {
+    spawnResource('wood');
+    spawnResource('coral');
+  }
 }
 
-function spawnResourceHost(type, deepSea = false) {
+function spawnResource(type) {
   let angle = Math.random() * Math.PI * 2;
-  let dist = deepSea ? (islandRadius + 20 + Math.random() * 110) : (10 + Math.random() * (islandRadius - 20));
-  createResourceMesh(type, Math.cos(angle) * dist, Math.sin(angle) * dist, 'res_' + Math.random().toString(36).substr(2, 9));
-}
+  let radius = Math.random() * (ISLAND_RADIUS - 10);
+  let rx = Math.cos(angle) * radius;
+  let rz = Math.sin(angle) * radius;
 
-function createResourceMesh(type, x, z, id) {
-  let color = 0xffffff; let size = 1.2; 
-  if(type === 'wood') { color = 0xb08d57; size = 1.0; }
-  else if(type === 'coral') { color = 0xff6b4a; size = 1.3; }
-  else if(type === 'scrap') { color = 0x8fa4ad; size = 0.9; }
-  else if(type === 'iron') { color = 0xa1a1a6; size = 1.2; }
-  else if(type === 'glow') { color = 0x3a86ff; size = 0.8; }
+  let geo, mat, height;
+  if (type === 'wood') {
+    geo = new THREE.ConeGeometry(0.7, 4, 5);
+    mat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.8 });
+    height = 2;
+  } else {
+    geo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+    mat = new THREE.MeshStandardMaterial({ color: 0xff8a65, roughness: 0.6 });
+    height = 0.6;
+  }
 
-  let geo = new THREE.DodecahedronGeometry(size);
-  let mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
-  if(type === 'glow') { mat.emissive = new THREE.Color(0x3a86ff); mat.emissiveIntensity = 0.9; }
-
-  let mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(x, size/2 + 0.4, z);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(rx, height, rz);
+  mesh.castShadow = true;
   scene.add(mesh);
-  resources.push({ id, type, x, z, mesh });
-}
 
-function syncEnemiesFromHost(hostEnemies) {
-  enemies.forEach(e => { if(e.mesh) scene.remove(e.mesh); });
-  enemies = hostEnemies.map(h => {
-    let geo = new THREE.BoxGeometry(2.2, 2.2, 2.2);
-    let mat = new THREE.MeshStandardMaterial({ color: 0xff4b2b, emissive: 0xaa2200 });
-    let mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(h.x, 1.2, h.z);
-    scene.add(mesh);
-    return { ...h, mesh };
+  resources.push({
+    id: 'res_' + Math.random().toString(36).substr(2, 9),
+    type, x: rx, z: rz, mesh
   });
 }
 
 function syncResourcesFromHost(hostResources) {
-  resources.forEach(r => { if(r.mesh) scene.remove(r.mesh); });
-  resources = [];
-  hostResources.forEach(hr => createResourceMesh(hr.type, hr.x, hr.z, hr.id));
+  const currentIds = hostResources.map(r => r.id);
+  for (let i = resources.length - 1; i >= 0; i--) {
+    if (!currentIds.includes(resources[i].id)) {
+      if (resources[i].mesh) scene.remove(resources[i].mesh);
+      resources.splice(i, 1);
+    }
+  }
+
+  hostResources.forEach(hr => {
+    let exists = resources.find(r => r.id === hr.id);
+    if (!exists) {
+      let geo, mat, height;
+      if (hr.type === 'wood') {
+        geo = new THREE.ConeGeometry(0.7, 4, 5);
+        mat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.8 });
+        height = 2;
+      } else {
+        geo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+        mat = new THREE.MeshStandardMaterial({ color: 0xff8a65, roughness: 0.6 });
+        height = 0.6;
+      }
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(hr.x, height, hr.z);
+      mesh.castShadow = true;
+      scene.add(mesh);
+      resources.push({ id: hr.id, type: hr.type, x: hr.x, z: hr.z, mesh });
+    }
+  });
 }
 
-function updateRemotePlayerMesh(id, x, z, angle, color, name) {
-  if(!remotePlayerMeshes[id]) {
-    let geo = new THREE.ConeGeometry(1.2, 2.5, 4);
-    geo.rotateX(Math.PI / 2);
-    let mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(color) });
-    let mesh = new THREE.Mesh(geo, mat);
-    scene.add(mesh);
-    remotePlayerMeshes[id] = mesh;
+function syncEnemiesFromHost(hostEnemies) {
+  const currentIds = hostEnemies.map(e => e.id);
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    if (!currentIds.includes(enemies[i].id)) {
+      if (enemies[i].mesh) scene.remove(enemies[i].mesh);
+      enemies.splice(i, 1);
+    }
   }
-  let mesh = remotePlayerMeshes[id];
-  mesh.position.set(x, 1.2, z);
-  mesh.rotation.y = angle;
+
+  hostEnemies.forEach(he => {
+    let exists = enemies.find(e => e.id === he.id);
+    if (exists) {
+      exists.x = he.x;
+      exists.z = he.z;
+      exists.hp = he.hp;
+      if (exists.mesh) exists.mesh.position.set(he.x, 1.0, he.z);
+    } else {
+      const geo = new THREE.BoxGeometry(1.6, 2.0, 1.6);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x990000, roughness: 0.5 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(he.x, 1.0, he.z);
+      mesh.castShadow = true;
+      scene.add(mesh);
+      enemies.push({ id: he.id, x: he.x, z: he.z, hp: he.hp, mesh });
+    }
+  });
+}
+
+function updateRemotePlayerMesh(id, rx, rz, angle, color, name) {
+  if (!remotePlayers[id]) {
+    const group = new THREE.Group();
+    const bodyGeo = new THREE.CylinderGeometry(0.8, 0.8, 2.4, 8);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 1.2;
+    body.castShadow = true;
+    group.add(body);
+
+    const headGeo = new THREE.SphereGeometry(0.5, 8, 8);
+    const headMat = new THREE.MeshStandardMaterial({ color: 0xbbbbbb });
+    const head = new THREE.Mesh(headGeo, headMat);
+    head.position.y = 2.7;
+    group.add(head);
+
+    scene.add(group);
+    remotePlayers[id] = { mesh: group };
+  }
+  
+  remotePlayers[id].mesh.position.set(rx, 0, rz);
+  remotePlayers[id].mesh.rotation.y = angle;
 }
 
 function removeRemotePlayerMesh(id) {
-  if(remotePlayerMeshes[id]) { scene.remove(remotePlayerMeshes[id]); delete remotePlayerMeshes[id]; }
+  if (remotePlayers[id]) {
+    if (remotePlayers[id].mesh) scene.remove(remotePlayers[id].mesh);
+    delete remotePlayers[id];
+  }
 }
 
-function setupUI() {
-  const list = document.getElementById('recipe-list'); list.innerHTML = '';
-  recipes.forEach((rec, i) => {
-    let card = document.createElement('div'); card.className = `recipe-card ${i === buildIndex ? 'selected' : ''}`; card.id = `recipe-${i}`;
-    let costs = []; 
-    if(rec.cost.wood > 0) costs.push(`${rec.cost.wood}W`); if(rec.cost.coral > 0) costs.push(`${rec.cost.coral}C`); 
-    if(rec.cost.scrap > 0) costs.push(`${rec.cost.scrap}S`); if(rec.cost.iron > 0) costs.push(`${rec.cost.iron}I`);
-    if(rec.cost.glow > 0) costs.push(`${rec.cost.glow}G`);
-    card.innerHTML = `<div class="recipe-name">${rec.name}</div><div class="recipe-cost">${costs.join(' ')}</div><div style="font-size:8px; color:var(--bioglow); margin-top:2px;">${rec.requiresTable ? 'Requires Table' : 'Basic'}</div>`;
-    card.onclick = () => { if(gameActive) { buildIndex = i; updateUI(); } }; list.appendChild(card);
-  });
-}
+// --- CONTROLS & EVENT LISTENERS ---
+let keys = {};
+let isDraggingCamera = false;
+let previousMouseX = 0, previousMouseY = 0;
 
-function updateUI() {
-  document.getElementById('res-wood').innerText = inventory.wood; document.getElementById('res-coral').innerText = inventory.coral; document.getElementById('res-scrap').innerText = inventory.scrap;
-  document.getElementById('res-iron').innerText = inventory.iron; document.getElementById('res-glow').innerText = inventory.glow;
-  document.getElementById('ui-day').innerText = currentDay; document.getElementById('ui-phase').innerText = isNight ? "ABYSSAL NIGHTFALL" : "BRIGHT DAYLIGHT";
-  document.getElementById('ui-timer').innerText = Math.ceil(phaseDuration - (cycleTime % phaseDuration));
-  document.getElementById('lbl-hp').innerText = Math.round(player.hp); document.getElementById('hp-fill').style.width = `${(player.hp/player.maxHp)*100}%`;
-  document.getElementById('lbl-shield').innerText = Math.round(player.shield); document.getElementById('shield-fill').style.width = `${(player.shield/player.maxShield)*100}%`;
-  document.getElementById('lbl-oxygen').innerText = Math.round(player.oxygen); document.getElementById('oxygen-fill').style.width = `${player.oxygen}%`;
+function setupInputHandlers() {
+  window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; player.isMovingToTarget = false; });
+  window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+  const canvasElement = renderer.domElement;
   
-  let wLabel = "WEAPON STATUS: UNARMED (Shoot via cross-tap if armed)";
-  if(!isTouchDevice) wLabel = "WEAPON STATUS: UNARMED (Left Click anywhere to shoot when armed)";
-  if (craftedWeapons.blaster) wLabel = "WEAPON STATUS: BLASTER ONLINE";
-  else if (craftedWeapons.spear) wLabel = "WEAPON STATUS: HARPOON ONLINE";
-  document.getElementById('weapon-status-panel').innerText = wLabel;
-  document.getElementById('weapon-status-panel').style.color = (craftedWeapons.spear || craftedWeapons.blaster) ? 'var(--bioglow)' : 'var(--coral)';
-
-  recipes.forEach((rec, i) => {
-    let card = document.getElementById(`recipe-${i}`); if(!card) return; card.className = `recipe-card ${i === buildIndex ? 'selected' : ''}`;
-    let isWeaponOwned = rec.type === 'weapon' && craftedWeapons[rec.weaponId];
-    if(inventory.wood < rec.cost.wood || inventory.coral < rec.cost.coral || inventory.scrap < rec.cost.scrap || inventory.iron < rec.cost.iron || inventory.glow < rec.cost.glow || (rec.requiresTable && !isNearTable) || isWeaponOwned) {
-      card.classList.add('locked');
+  canvasElement.addEventListener('mousedown', e => {
+    if (e.button === 0) {
+      handleIslandInteraction(e.clientX, e.clientY);
+    } else if (e.button === 2) {
+      isDraggingCamera = true;
+      previousMouseX = e.clientX;
+      previousMouseY = e.clientY;
     }
   });
-  const proxIndicator = document.getElementById('proximity-status'); proxIndicator.innerText = isNearTable ? "Near Active Workbench" : "Workbench Out of Range"; proxIndicator.className = isNearTable ? "table-indicator" : "table-missing";
+
+  canvasElement.addEventListener('mousemove', e => {
+    if (isDraggingCamera) {
+      let deltaX = e.clientX - previousMouseX;
+      let deltaY = e.clientY - previousMouseY;
+      player.camAngle -= deltaX * 0.007;
+      player.camPitch = Math.max(0.1, Math.min(1.2, player.camPitch + deltaY * 0.007));
+      previousMouseX = e.clientX;
+      previousMouseY = e.clientY;
+    }
+  });
+
+  window.addEventListener('mouseup', () => isDraggingCamera = false);
+  canvasElement.addEventListener('contextmenu', e => e.preventDefault());
+
+  // Touch Support
+  canvasElement.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      handleIslandInteraction(touch.clientX, touch.clientY);
+    }
+  }, { passive: true });
 }
 
-window.addEventListener('keydown', (e) => {
-  if(!gameActive) return;
-  if(e.key.toLowerCase() === 'w') input.w = true; if(e.key.toLowerCase() === 's') input.s = true;
-  if(e.key.toLowerCase() === 'a') input.a = true; if(e.key.toLowerCase() === 'd') input.d = true;
-  
-  if(e.key.toLowerCase() === 'q') { buildIndex = (buildIndex - 1 + recipes.length) % recipes.length; updateUI(); }
-  if(e.key.toLowerCase() === 'e') { buildIndex = (buildIndex + 1) % recipes.length; updateUI(); }
-  if(e.key === ' ') { e.preventDefault(); attemptBuildOrCraft(); }
-});
+function handleIslandInteraction(clientX, clientY) {
+  const mouse = new THREE.Vector2(
+    (clientX / window.innerWidth) * 2 - 1,
+    -(clientY / window.innerHeight) * 2 + 1
+  );
 
-window.addEventListener('keyup', (e) => {
-  if(e.key.toLowerCase() === 'w') input.w = false; if(e.key.toLowerCase() === 's') input.s = false;
-  if(e.key.toLowerCase() === 'a') input.a = false; if(e.key.toLowerCase() === 'd') input.d = false;
-});
-
-function attemptBuildOrCraft() {
-  let recipe = recipes[buildIndex]; 
-  if ((recipe.requiresTable && !isNearTable) || inventory.wood < recipe.cost.wood || inventory.coral < recipe.cost.coral || inventory.scrap < recipe.cost.scrap || inventory.iron < recipe.cost.iron || inventory.glow < recipe.cost.glow) return;
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
   
-  if (recipe.type === 'weapon') {
-    if (craftedWeapons[recipe.weaponId]) return;
-    craftedWeapons[recipe.weaponId] = true;
-  } else {
-    let lookAngle = player.mesh ? player.mesh.rotation.y : 0;
-    let bx = player.x + Math.sin(lookAngle) * 5.0;
-    let bz = player.z + Math.cos(lookAngle) * 5.0;
+  const intersects = raycaster.intersectObjects(scene.children, true);
+  for (let hit of intersects) {
+    if (hit.object.geometry && hit.object.geometry.type === "CylinderGeometry" && hit.point.y > -0.5) {
+      if (currentSchematic === 'none') {
+        player.targetX = hit.point.x;
+        player.targetZ = hit.point.z;
+        player.isMovingToTarget = true;
+      } else {
+        executeStructureBuild(hit.point.x, hit.point.z);
+      }
+      break;
+    }
+  }
+}
+
+function selectSchematic(type) {
+  currentSchematic = type;
+  document.querySelectorAll('.craft-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-sch-' + type).classList.add('active');
+  
+  const inst = document.getElementById('crafting-instructions');
+  if (type === 'none') inst.innerText = "Observe Mode: Click / Tap anywhere on the island mesh to travel safely.";
+  if (type === 'wall') inst.innerText = "Fabricate Mode: Click anywhere on the island map grid to position an Alloy Wall.";
+  if (type === 'crafting_table') inst.innerText = "Fabricate Mode: Click anywhere on the island map grid to position a Pylon Lab.";
+}
+
+function executeStructureBuild(bx, bz) {
+  let costWood = currentSchematic === 'wall' ? 4 : 8;
+  let costCoral = currentSchematic === 'wall' ? 2 : 4;
+
+  if (inventory.wood >= costWood && inventory.coral >= costCoral) {
+    inventory.wood -= costWood;
+    inventory.coral -= costCoral;
     
-    let geo = new THREE.BoxGeometry(3, recipe.height, 3);
-    let mat = new THREE.MeshStandardMaterial({ color: recipe.color, roughness: 0.6 });
-    let mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(bx, recipe.height/2 + 0.3, bz);
+    const geometry = currentSchematic === 'wall' ? new THREE.BoxGeometry(3, 3, 0.8) : new THREE.CylinderGeometry(1, 1.2, 4, 6);
+    const material = new THREE.MeshStandardMaterial({ 
+      color: currentSchematic === 'wall' ? 0x2c3e50 : 0x1f5f63, 
+      roughness: 0.4, 
+      metalness: 0.8 
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(bx, currentSchematic === 'wall' ? 1.5 : 2, bz);
+    mesh.castShadow = true;
     scene.add(mesh);
 
-    structures.push({
-      id: 'struct_' + Math.random().toString(36).substr(2, 9),
-      type: recipe.id, x: bx, z: bz, height: recipe.height,
-      hp: recipe.id === 'wood_wall' ? 180 : 100, mesh
+    structures.push({ type: currentSchematic, x: bx, z: bz, mesh });
+    
+    sendNetworkPacket({ 
+      type: 'build', 
+      structureType: currentSchematic, 
+      x: bx, 
+      z: bz 
     });
-  }
 
-  inventory.wood -= recipe.cost.wood; inventory.coral -= recipe.cost.coral; inventory.scrap -= recipe.cost.scrap; inventory.iron -= recipe.cost.iron; inventory.glow -= recipe.cost.glow;
-  updateUI();
-}
-
-// --- CYCLE LOOPS ---
-function tick3D(now) {
-  if(!gameActive) return; 
-  requestAnimationFrame(tick3D);
-  
-  let delta = (now - lastTime) / 1000;
-  if(delta > 0.1) delta = 0.1;
-  lastTime = now;
-
-  if (isHost) {
-    cycleTime += delta;
-    let nightCheck = (Math.floor(cycleTime / phaseDuration) % 2 === 1);
-    if(nightCheck !== isNight) {
-      isNight = nightCheck;
-      if(!isNight) {
-        currentDay++;
-        spawnResourceHost('wood', false); spawnResourceHost('coral', false);
-        if(Math.random() > 0.4) spawnResourceHost('iron', true);
-        if(Math.random() > 0.4) spawnResourceHost('glow', true);
-      }
-      
-      if(isNight) {
-        scene.background.setHex(0x06121b);
-        scene.fog.color.setHex(0x06121b);
-        ambientLight.color.setHex(0x1a3a4e);
-      } else {
-        scene.background.setHex(0x0e2637);
-        scene.fog.color.setHex(0x0e2637);
-        ambientLight.color.setHex(0x285973);
-      }
-      updateUI();
-    }
-    processHostEnemySimulation(delta);
-    broadcastWorldState();
-  }
-
-  let moveX = 0, moveZ = 0;
-  if(input.w) { moveX += Math.sin(player.camAngle); moveZ += Math.cos(player.camAngle); }
-  if(input.s) { moveX -= Math.sin(player.camAngle); moveZ -= Math.cos(player.camAngle); }
-  if(input.a) { moveX += Math.sin(player.camAngle + Math.PI/2); moveZ += Math.cos(player.camAngle + Math.PI/2); }
-  if(input.d) { moveX -= Math.sin(player.camAngle + Math.PI/2); moveZ -= Math.cos(player.camAngle + Math.PI/2); }
-
-  if(moveX !== 0 || moveZ !== 0) {
-    let len = Math.hypot(moveX, moveZ);
-    let dx = (moveX / len) * player.speed * delta;
-    let dz = (moveZ / len) * player.speed * delta;
-    
-    player.x += dx;
-    player.z += dz;
-    
-    if(player.mesh) {
-      player.mesh.rotation.y = Math.atan2(dx, dz);
-    }
-
-    let currentDist = Math.hypot(player.x, player.z);
-    if(currentDist > 400) {
-      let angle = Math.atan2(player.z, player.x);
-      player.x = Math.cos(angle) * 400; 
-      player.z = Math.sin(angle) * 400;
-    }
-  }
-
-  if(player.mesh) {
-    player.mesh.position.set(player.x, player.y, player.z);
-  }
-
-  let camX = player.x - Math.sin(player.camAngle) * Math.cos(player.camPitch) * player.camRadius;
-  let camY = player.y + Math.sin(player.camPitch) * player.camRadius + 1.5;
-  let camZ = player.z - Math.cos(player.camAngle) * Math.cos(player.camPitch) * player.camRadius;
-  
-  camera.position.set(camX, camY, camZ);
-  camera.lookAt(player.x, player.y + 1.2, player.z);
-  
-  broadcastLocalState();
-
-  let distFromIsland = Math.hypot(player.x, player.z);
-  let nearO2Substation = false;
-  structures.forEach(s => {
-    if(s.type === 'oxygen_sub' && Math.hypot(player.x - s.x, player.z - s.z) < 12) nearO2Substation = true;
-  });
-
-  if (distFromIsland > islandRadius && !nearO2Substation) {
-    document.getElementById('oxygen-container').style.display = 'block';
-    player.oxygen = Math.max(0, player.oxygen - 14 * delta);
-    if(player.oxygen <= 0) {
-      player.hp -= 12 * delta;
-      updateUI();
-      if(player.hp <= 0) gameOver();
-    }
+    selectSchematic('none');
     updateUI();
   } else {
-    if(player.oxygen < 100) {
-      player.oxygen = Math.min(100, player.oxygen + 45 * delta);
-      updateUI();
-      if(player.oxygen >= 100 && distFromIsland <= islandRadius) document.getElementById('oxygen-container').style.display = 'none';
+    alert("Insufficient localized nanite resources in Cargo Matrix!");
+  }
+}
+
+// --- CORE GAME ENGINE LOOP ---
+function gameLoop(timestamp) {
+  if (!gameActive) return;
+  let delta = (timestamp - lastTime) / 1000;
+  if (delta > 0.1) delta = 0.1; 
+  lastTime = timestamp;
+
+  updateEnvironmentClock(delta);
+  processPlayerMovement(delta);
+  processProjectiles(delta);
+
+  if (isHost) {
+    processEnemySimulation(delta);
+    if (Math.random() < 0.004) spawnHostResourceDistribution();
+    if (Math.random() < 0.01) broadcastWorldState();
+  }
+
+  updateCameraRig();
+  renderer.render(scene, camera);
+  
+  broadcastLocalState();
+  requestAnimationFrame(gameLoop);
+}
+
+function updateEnvironmentClock(delta) {
+  cycleTime += delta * 2; 
+  if (cycleTime >= 240) {
+    cycleTime = 0;
+    currentDay++;
+    if (isHost) {
+      for (let i=0; i<10; i++) spawnResource('wood');
+      for (let i=0; i<5; i++) spawnResource('coral');
     }
+  }
+
+  isNight = (cycleTime > 120);
+  let hour = Math.floor((cycleTime / 240) * 24);
+  let minute = Math.floor(((cycleTime / 240) * 24 % 1) * 60);
+  document.getElementById('ui-time').innerText = (hour<10?'0':'')+hour + ":" + (minute<10?'0':'')+minute;
+  document.getElementById('ui-day').innerText = "SOLAR SECTOR " + (currentDay<10?'0':'')+currentDay + (isNight ? " // ECLIPSE" : " // ZENITH");
+
+  if (isNight) {
+    scene.background.lerp(new THREE.Color(0x010306), 0.05);
+    scene.fog.color.lerp(new THREE.Color(0x010306), 0.05);
+    directionalLight.intensity = Math.max(0.05, directionalLight.intensity - 0.02);
+    ambientLight.color.setHex(0x3a86ff);
+  } else {
+    scene.background.lerp(new THREE.Color(0x020a10), 0.05);
+    scene.fog.color.lerp(new THREE.Color(0x020a10), 0.05);
+    directionalLight.intensity = Math.min(0.8, directionalLight.intensity + 0.02);
+    ambientLight.color.setHex(0xffffff);
+  }
+}
+
+function processPlayerMovement(delta) {
+  let moveX = 0, moveZ = 0;
+  let speed = 15.0;
+
+  if (keys['w'] || keys['arrowup']) { moveX += Math.sin(player.camAngle); moveZ += Math.cos(player.camAngle); }
+  if (keys['s'] || keys['arrowdown']) { moveX -= Math.sin(player.camAngle); moveZ -= Math.cos(player.camAngle); }
+  if (keys['a'] || keys['arrowleft']) { moveX += Math.cos(player.camAngle); moveZ -= Math.sin(player.camAngle); }
+  if (keys['d'] || keys['arrowright']) { moveX -= Math.cos(player.camAngle); moveZ += Math.sin(player.camAngle); }
+
+  if (moveX !== 0 || moveZ !== 0) {
+    player.isMovingToTarget = false;
+    let len = Math.hypot(moveX, moveZ);
+    player.x += (moveX / len) * speed * delta;
+    player.z += (moveZ / len) * speed * delta;
+    player.mesh.rotation.y = Math.atan2(moveX, moveZ);
+  } else if (player.isMovingToTarget) {
+    let dx = player.targetX - player.x;
+    let dz = player.targetZ - player.z;
+    let dist = Math.hypot(dx, dz);
+    if (dist > 0.5) {
+      player.x += (dx / dist) * speed * delta;
+      player.z += (dz / dist) * speed * delta;
+      player.mesh.rotation.y = Math.atan2(dx, dz);
+    } else {
+      player.isMovingToTarget = false;
+    }
+  }
+
+  let distFromCenter = Math.hypot(player.x, player.z);
+  if (distFromCenter > ISLAND_RADIUS) {
+    player.x = (player.x / distFromCenter) * ISLAND_RADIUS;
+    player.z = (player.z / distFromCenter) * ISLAND_RADIUS;
+    player.oxygen = Math.max(0, player.oxygen - 15 * delta);
+  } else {
+    player.oxygen = Math.min(player.maxOxygen, player.oxygen + 10 * delta);
+  }
+
+  if (player.mesh) {
+    player.mesh.position.set(player.x, 0, player.z);
   }
 
   resources.forEach((res, idx) => {
-    if(Math.hypot(player.x - res.x, player.z - res.z) < 3.2) {
+    if (Math.hypot(player.x - res.x, player.z - res.z) < 3.2) {
       inventory[res.type] = (inventory[res.type] || 0) + 2;
+      
       sendNetworkPacket({ type: 'leave', id: res.id }); 
+      
       if (res.mesh) scene.remove(res.mesh);
       resources.splice(idx, 1);
       updateUI();
     }
   });
 
-  let nearTableCheck = false;
-  let shieldGen = 0;
-  structures.forEach(s => {
-    if(s.type === 'crafting_table' && Math.hypot(player.x - s.x, player.z - s.z) < 7.5) nearTableCheck = true;
-    if(s.type === 'shield_pylon' && Math.hypot(player.x - s.x, player.z - s.z) < 18.0) shieldGen += 10 * delta;
-  });
-  if(nearTableCheck !== isNearTable) { isNearTable = nearTableCheck; updateUI(); }
-  if(shieldGen > 0) { player.shield = Math.min(player.maxShield, player.shield + shieldGen); updateUI(); }
-
-  projectiles.forEach((p, idx) => {
-    p.x += p.vx * delta; p.y += p.vy * delta; p.z += p.vz * delta;
-    p.traveled += Math.hypot(p.vx * delta, p.vz * delta);
-    if(p.mesh) p.mesh.position.set(p.x, p.y, p.z);
-    
-    enemies.forEach((en) => {
-      if(Math.hypot(p.x - en.x, p.z - en.z) < 2.8) {
-        en.hp -= p.damage;
-        p.traveled = p.range + 99;
-        if(en.hp <= 0 && isHost) { inventory.scrap += 2; updateUI(); }
-      }
-    });
-    
-    if(p.traveled >= p.range) {
-      if(p.mesh) scene.remove(p.mesh);
-      projectiles.splice(idx, 1);
-    }
-  });
-
-  renderer.render(scene, camera);
+  if (player.oxygen <= 0) { player.hp -= 10 * delta; updateUI(); }
+  if (player.hp <= 0) gameOver();
 }
 
-function processHostEnemySimulation(delta) {
-  if (!isNight) { 
-    enemies.forEach(e => { if(e.mesh) scene.remove(e.mesh); });
-    enemies = []; return; 
-  }
-  
-  let maxAllowed = currentDay * 3 + 3;
-  if (enemies.length < maxAllowed && Math.random() < 0.05) {
-    let ang = Math.random() * Math.PI * 2;
-    let sDist = islandRadius + 60;
-    let ex = Math.cos(ang) * sDist;
-    let ez = Math.sin(ang) * sDist;
-
-    let geo = new THREE.BoxGeometry(2.2, 2.2, 2.2);
-    let mat = new THREE.MeshStandardMaterial({ color: 0xff4b2b });
-    let mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(ex, 1.1, ez);
+function processEnemySimulation(delta) {
+  if (isNight && enemies.length < currentDay * 3 + 2) {
+    let spawnAngle = Math.random() * Math.PI * 2;
+    let ex = Math.cos(spawnAngle) * (ISLAND_RADIUS - 2);
+    let ez = Math.sin(spawnAngle) * (ISLAND_RADIUS - 2);
+    
+    const geo = new THREE.BoxGeometry(1.6, 2.0, 1.6);
+    const mat = new THREE.MeshStandardMaterial({ color: 0x990000, roughness: 0.5 });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(ex, 1.0, ez);
+    mesh.castShadow = true;
     scene.add(mesh);
 
     enemies.push({
       id: 'en_' + Math.random().toString(36).substr(2, 9),
-      x: ex, z: ez, hp: 30 + currentDay * 5, speed: 14 + Math.random() * 7, mesh
+      x: ex, z: ez, hp: 40, mesh
     });
   }
 
   enemies.forEach((en, idx) => {
-    let targets = [{ x: player.x, z: player.z, isPlayer: true }];
-    Object.keys(remotePlayersData).forEach(id => targets.push({ x: remotePlayersData[id].x, z: remotePlayersData[id].z, isPlayer: false }));
-    
-    let nearest = null, minDist = Infinity;
-    targets.forEach(t => {
-      let d = Math.hypot(en.x - t.x, en.z - t.z);
-      if(d < minDist) { minDist = d; nearest = t; }
-    });
+    let tx = player.x, tz = player.z;
+    let minDist = Math.hypot(tx - en.x, tz - en.z);
 
-    if(nearest) {
-      let ang = Math.atan2(nearest.z - en.z, nearest.x - en.x);
-      en.x += Math.cos(ang) * en.speed * delta;
-      en.z += Math.sin(ang) * en.speed * delta;
-      if(en.mesh) en.mesh.position.set(en.x, 1.1, en.z);
+    for (let pId in remotePlayersData) {
+      let d = Math.hypot(remotePlayersData[pId].x - en.x, remotePlayersData[pId].z - en.z);
+      if (d < minDist) { minDist = d; tx = remotePlayersData[pId].x; tz = remotePlayersData[pId].z; }
+    }
 
-      if(minDist < 3.0) {
-        if(nearest.isPlayer) {
-          if(player.shield > 0) player.shield = Math.max(0, player.shield - 35 * delta);
-          else player.hp -= 20 * delta;
-          updateUI();
-          if(player.hp <= 0) gameOver();
-        }
+    let edx = tx - en.x;
+    let edz = tz - en.z;
+    if (minDist > 1.0) {
+      en.x += (edx / minDist) * 5.0 * delta;
+      en.z += (edz / minDist) * 5.0 * delta;
+      if (en.mesh) en.mesh.position.set(en.x, 1.0, en.z);
+    }
+
+    if (minDist < 2.5) {
+      if (tx === player.x && tz === player.z) {
+        if (player.shield > 0) player.shield = Math.max(0, player.shield - 25 * delta);
+        else player.hp -= 20 * delta;
+        updateUI();
+        if (player.hp <= 0) gameOver();
       }
     }
-    
-    if (en.hp <= 0) {
-      if(en.mesh) scene.remove(en.mesh);
-      enemies.splice(idx, 1);
+  });
+}
+
+function spawnHostResourceDistribution() {
+  if (resources.length < 60) {
+    spawnResource(Math.random() < 0.6 ? 'wood' : 'coral');
+  }
+}
+
+function processProjectiles(delta) {
+  projectiles.forEach((p, idx) => {
+    p.x += p.vx * delta; p.z += p.vz * delta;
+    p.traveled += Math.hypot(p.vx * delta, p.vz * delta);
+    if (p.mesh) p.mesh.position.set(p.x, 1.5, p.z);
+
+    if (isHost) {
+      enemies.forEach(en => {
+        if (Math.hypot(p.x - en.x, p.z - en.z) < 2.5) {
+          en.hp -= 20;
+          p.traveled = 999; 
+          if (en.hp <= 0) {
+            inventory.scrap += 3;
+            updateUI();
+          }
+        }
+      });
+    }
+
+    if (p.traveled > 40) {
+      if (p.mesh) scene.remove(p.mesh);
+      projectiles.splice(idx, 1);
     }
   });
+}
+
+function updateCameraRig() {
+  if (!player.mesh) return;
+  let targetCamX = player.x - Math.sin(player.camAngle) * player.camRadius * Math.cos(player.camPitch);
+  let targetCamZ = player.z - Math.cos(player.camAngle) * player.camRadius * Math.cos(player.camPitch);
+  let targetCamY = 2.0 + Math.sin(player.camPitch) * player.camRadius;
+
+  camera.position.set(targetCamX, targetCamY, targetCamZ);
+  camera.lookAt(player.x, 2.0, player.z);
+}
+
+function updateUI() {
+  document.getElementById('ui-hp').innerText = Math.round(player.hp) + "%";
+  document.getElementById('fill-hp').style.width = Math.max(0, player.hp) + "%";
+  document.getElementById('ui-shield').innerText = Math.round(player.shield) + "%";
+  document.getElementById('fill-shield').style.width = player.shield + "%";
+  document.getElementById('ui-oxygen').innerText = Math.round(player.oxygen) + "%";
+  document.getElementById('fill-oxygen').style.width = player.oxygen + "%";
+
+  document.getElementById('inv-wood').innerText = inventory.wood;
+  document.getElementById('inv-coral').innerText = inventory.coral;
+  document.getElementById('inv-scrap').innerText = inventory.scrap;
 }
 
 function gameOver() { 
@@ -1195,28 +857,30 @@ function gameOver() {
 }
 
 function resetGame() {
+  document.getElementById('death-screen').classList.remove('active');
   projectiles.forEach(p => { if(p.mesh) scene.remove(p.mesh); });
   structures.forEach(s => { if(s.mesh) scene.remove(s.mesh); });
   enemies.forEach(e => { if(e.mesh) scene.remove(e.mesh); });
-  resources.forEach(r => { if(r.mesh) scene.remove(r.mesh); });
-
-  projectiles = []; structures = []; enemies = []; resources = [];
-  if(isHost) initResources();
+  
+  projectiles = []; structures = []; enemies = [];
+  if (isHost) initResources();
   
   player.x = 0; player.z = 0; player.hp = 100; player.shield = 0; player.oxygen = 100;
   player.camAngle = 0; player.camPitch = 0.5;
-  inventory = { wood: 12, coral: 6, scrap: 0, iron: 0, glow: 0 };
-  craftedWeapons = { spear: false, blaster: false };
-  cycleTime = 0; currentDay = 1; isNight = false; buildIndex = 0;
+  inventory = { wood: 12, coral: 6, scrap: 0 };
+  cycleTime = 40; isNight = false; currentDay = 1;
   
-  document.getElementById('death-screen').classList.remove('active');
-  document.getElementById('oxygen-container').style.display = 'none';
-  
-  scene.background.setHex(0x0e2637);
-  scene.fog.color.setHex(0x0e2637);
-  ambientLight.color.setHex(0x285973);
+  selectSchematic('none');
+  updateUI();
+  gameActive = true;
+  lastTime = performance.now();
+  requestAnimationFrame(gameLoop);
+}
 
-  gameActive = true; updateUI(); lastTime = performance.now(); tick3D(lastTime);
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 }
 </script>
 </body>
