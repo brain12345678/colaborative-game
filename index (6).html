@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ATOLL 3D — Third Person Grid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+  :root{
+    --abyss:#0c1f2d;
+    --tide-navy:#123a3e;
+    --lagoon:#1f5f63;
+    --sand:#e7c989;
+    --coral:#ff6b4a;
+    --bioglow:#6ef2b0;
+    --abyssal-blue:#3a86ff;
+    --iron-gray:#a1a1a6;
+    --foam:#f3f7f2;
+    --foam-dim:rgba(243,247,242,0.62);
+    --line:rgba(243,247,242,0.14);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--abyss);
+    color:var(--foam);
+    font-family:'Inter', sans-serif;
+    overflow:hidden;
+    user-select:none;
+    height:100vh;
+    touch-action: none;
+  }
+  #landing-page {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: radial-gradient(circle at center, #1f5f63 0%, var(--abyss) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: opacity 0.5s ease;
+  }
+  .lobby-card {
+    background: rgba(5, 15, 22, 0.9);
+    border: 1px solid var(--line);
+    padding: 40px;
+    border-radius: 6px;
+    backdrop-filter: blur(12px);
+    width: 420px;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  }
+  .lobby-card h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 42px;
+    color: var(--sand);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+  .lobby-card p {
+    font-size: 13px;
+    color: var(--foam-dim);
+    margin-bottom: 30px;
+  }
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    margin-bottom: 20px;
+  }
+  .input-group label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--sand);
+    margin-bottom: 6px;
+  }
+  .input-group input {
+    background: rgba(243,247,242,0.05);
+    border: 1px solid var(--line);
+    padding: 12px;
+    color: var(--foam);
+    font-family: inherit;
+    font-size: 14px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-group input:focus {
+    border-color: var(--bioglow);
+  }
+  .btn-join {
+    width: 100%;
+    background: var(--bioglow);
+    color: #050f16;
+    border: none;
+    padding: 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    transition: background 0.2s;
+    margin-top: 10px;
+  }
+  .btn-join:hover {
+    background: #52d296;
+  }
+  #canvas3d {
+    display: none; 
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    top: 0; left: 0;
+  }
+  .ui-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    display: none; 
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 24px;
+    box-sizing: border-box;
+    z-index: 10;
+  }
+  .panel {
+    background: rgba(5, 15, 22, 0.85);
+    border: 1px solid var(--line);
+    padding: 16px;
+    border-radius: 4px;
+    pointer-events: auto;
+    backdrop-filter: blur(8px);
+  }
+  .top-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+  .room-banner {
+    color: var(--bioglow);
+    font-size: 11px;
+    margin-bottom: 4px;
+    border-bottom: 1px dashed var(--line);
+    padding-bottom: 4px;
+  }
+  .resources-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .res-item {
+    background: rgba(243,247,242,0.05);
+    padding: 4px 6px;
+    border-radius: 2px;
+    border-left: 3px solid var(--sand);
+    font-size: 10px;
+  }
+  .res-item.wood { border-left-color: #b08d57; }
+  .res-item.coral { border-left-color: var(--coral); }
+  .res-item.scrap { border-left-color: #8fa4ad; }
+  .res-item.iron { border-left-color: var(--iron-gray); }
+  .res-item.glow { border-left-color: var(--abyssal-blue); }
+  
+  .bottom-center {
+    align-self: center;
+    width: 640px;
+    max-width: 90vw;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .crafting-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--foam-dim);
+    display: flex;
+    justify-content: space-between;
+  }
+  .recipe-carousel {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .recipe-card {
+    flex: 0 0 145px;
+    background: rgba(243,247,242,0.03);
+    border: 1px solid rgba(243,247,242,0.1);
+    padding: 10px;
+    border-radius: 3px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .recipe-card.selected {
+    background: rgba(243,247,242,0.1);
+    border-color: var(--sand);
+    transform: translateY(-2px);
+  }
+  .recipe-card.locked {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .recipe-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+  .recipe-cost { font-size: 9px; font-family: 'IBM Plex Mono', monospace; color: var(--foam-dim); line-height: 1.2; }
+  
+  .status-bars {
+    position: absolute;
+    top: 24px; right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 220px;
+  }
+  .bar-container {
+    background: rgba(0,0,0,0.4);
+    height: 18px;
+    border: 1px solid var(--line);
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    transition: width 0.1s ease-out;
+  }
+  #hp-fill { background: var(--coral); width: 100%; }
+  #shield-fill { background: #45a2bf; width: 0%; }
+  #oxygen-container { display: none; }
+  #oxygen-fill { background: var(--abyssal-blue); width: 100%; }
+  .bar-label {
+    position: absolute;
+    width: 100%; height: 100%;
+    top: 0; left: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
+  #weapon-status-panel {
+    margin-top: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--coral);
+    text-align: right;
+  }
+  #death-screen {
+    position: absolute;
+    top:0; left:0; width:100%; height:100%;
+    background: rgba(5, 15, 22, 0.95);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.5s;
+  }
+  #death-screen.active { opacity: 1; pointer-events: auto; }
+  #death-screen h1 { font-family: 'Fraunces', serif; font-size: 48px; color: var(--coral); margin-bottom: 12px; }
+  #death-screen button {
+    background: transparent; border: 1px solid var(--foam); color: var(--foam);
+    padding: 10px 24px; font-family: 'IBM Plex Mono', monospace; cursor: pointer; transition: 0.2s;
+  }
+  #death-screen button:hover { background: var(--foam); color: #050f16; }
+  
+  .table-indicator { color: var(--bioglow); font-weight: bold; }
+  .table-missing { color: var(--coral); }
+  #host-badge { font-size: 11px; color: var(--sand); background: rgba(231,201,137,0.1); padding: 2px 6px; border-radius: 3px; display: inline-block; margin-top: 4px;}
+  
+  #controls-notice {
+    position: absolute;
+    top: 80px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(5,15,22,0.85);
+    border: 1px solid var(--bioglow);
+    padding: 10px 18px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    pointer-events: none;
+    z-index: 20;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  /* --- MOBILE D-PAD & TOUCH OVERLAYS --- */
+  #mobile-dpad {
+    position: absolute;
+    bottom: 30px; left: 30px;
+    width: 140px; height: 140px;
+    display: none;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 4px;
+    z-index: 100;
+    pointer-events: auto;
+  }
+  .dpad-btn {
+    background: rgba(5, 15, 22, 0.8);
+    border: 1px solid var(--line);
+    color: var(--foam);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px; font-weight: bold;
+    user-select: none; -webkit-user-select: none;
+  }
+  .dpad-btn:active {
+    background: var(--bioglow);
+    color: #050f16;
+  }
+  #mobile-actions {
+    position: absolute;
+    bottom: 30px; right: 30px;
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 100;
+    pointer-events: auto;
+  }
+  .action-btn {
+    background: rgba(5, 15, 22, 0.8);
+    border: 1px solid var(--sand);
+    color: var(--sand);
+    padding: 12px 18px;
+    border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; font-weight: bold;
+    text-align: center;
+  }
+  .action-btn:active {
+    background: var(--sand);
+    color: #050f16;
+  }
+  .action-btn.deploy-btn {
+    border-color: var(--bioglow);
+    color: var(--bioglow);
+    padding: 16px 20px;
+    font-size: 14px;
+  }
+  .action-btn.deploy-btn:active {
+    background: var(--bioglow);
+    color: #050f16;
+  }
+</style>
+</head>
+<body>
+
+<div id="landing-page">
+  <div class="lobby-card">
+    <h1>ATOLL 3D</h1>
+    <p>3D Third-Person High-Visibility Oceanic Node</p>
+    <div class="input-group">
+      <label for="username">Identity Tag Name</label>
+      <input type="text" id="username" placeholder="e.g., AtollScout_7" maxlength="14">
+    </div>
+    <div class="input-group">
+      <label for="room-id">Shared Network Hub Room ID</label>
+      <input type="text" id="room-id" value="atoll-oceanic-grid" placeholder="e.g., sector-7" maxlength="20">
+    </div>
+    <button class="btn-join" onclick="initiateGameConnection()">CONNECT TO REEF RADIAL</button>
+  </div>
+</div>
+
+<div id="canvas3d"></div>
+<div id="controls-notice">
+  Left-click and Drag screen to orbit camera view<br>
+  [W][A][S][D] to Move character relative to look direction | [Left Click] anywhere when armed to fire
+</div>
+
+<div id="mobile-dpad">
+  <div></div>
+  <div class="dpad-btn" id="btn-up">W</div>
+  <div></div>
+  <div class="dpad-btn" id="btn-left">A</div>
+  <div class="dpad-btn" style="background:transparent; border:none; opacity:0.3;">✛</div>
+  <div class="dpad-btn" id="btn-right">D</div>
+  <div></div>
+  <div class="dpad-btn" id="btn-down">S</div>
+  <div></div>
+</div>
+
+<div id="mobile-actions">
+  <div style="display:flex; gap:6px;">
+    <div class="action-btn" id="btn-prev-recipe">◂ PREV</div>
+    <div class="action-btn" id="btn-next-recipe">NEXT ▸</div>
+  </div>
+  <div class="action-btn deploy-btn" id="btn-deploy">DEPLOY / CRAFT</div>
+</div>
+
+<div class="ui-overlay" id="game-ui">
+  <div class="panel top-left">
+    <div class="room-banner">GRID HUB: <span id="ui-room-name">...</span></div>
+    <div>CYCLE STAGE: <span id="ui-day">1</span> (<span id="ui-phase">DAYLIGHT</span>)</div>
+    <div>TIDE SEQUENCE: <span id="ui-timer">30</span>s</div>
+    <div id="host-badge">Role: Syncing...</div>
+    <div class="resources-grid">
+      <div class="res-item wood">Wood: <span id="res-wood">0</span></div>
+      <div class="res-item coral">Coral: <span id="res-coral">0</span></div>
+      <div class="res-item scrap">Ore: <span id="res-scrap">0</span></div>
+      <div class="res-item iron">Iron: <span id="res-iron">0</span></div>
+      <div class="res-item glow">Glow: <span id="res-glow">0</span></div>
+    </div>
+  </div>
+
+  <div class="status-bars">
+    <div class="bar-container">
+      <div id="hp-fill" class="bar-fill"></div>
+      <div class="bar-label">VITALS: <span id="lbl-hp">100</span>/100</div>
+    </div>
+    <div class="bar-container">
+      <div id="shield-fill" class="bar-fill"></div>
+      <div class="bar-label">SHIELD CORE: <span id="lbl-shield">0</span>/100</div>
+    </div>
+    <div class="bar-container" id="oxygen-container">
+      <div id="oxygen-fill" class="bar-fill"></div>
+      <div class="bar-label">OXYGEN MATRIX: <span id="lbl-oxygen">100</span>%</div>
+    </div>
+    <div id="weapon-status-panel">WEAPON STATUS: UNARMED</div>
+  </div>
+
+  <div class="panel bottom-center">
+    <div class="crafting-title">
+      <span id="crafting-instructions">Radial Schematics ([Q]/[E] to scroll, [Space] to deploy / craft)</span>
+      <span id="proximity-status" class="table-missing">Workbench Out of Range</span>
+    </div>
+    <div class="recipe-carousel" id="recipe-list"></div>
+  </div>
+</div>
+
+<div id="death-screen">
+  <h1>Structure Submerged</h1>
+  <p style="margin-bottom:24px; font-family:'IBM Plex Mono'; color: var(--foam-dim);">Survival span: <span id="death-days">0</span> cycles.</p>
+  <button onclick="resetGame()">RE-INITIALIZE GRID</button>
+</div>
+
+<script>
+// --- INTERNET MULTIPLAYER LAYER CORE ---
+let multiplayerRoomId = 'atoll-solo';
+let chosenName = 'Mariner';
+window.playerId = 'p_' + Math.random().toString(36).substr(2, 9);
+const sessionStartTime = Date.now();
+
+let wsConnection;
+let remotePlayersData = {}; 
+let isHost = true; 
+let roomPeers = {};
+
+// Public pool of WebSockets to distribute internet packets across devices
+const PUBLIC_RELAYS = [
+  "wss://relay.damus.io",
+  "wss://nos.lol",
+  "wss://relay.nostr.band"
+];
+let activeRelayUrl = PUBLIC_RELAYS[Math.floor(Math.random() * PUBLIC_RELAYS.length)];
+
+// Robust Touch / iPadOS Device Check
+const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+
+function setupMultiplayerChannel() {
+  console.log("Connecting to internet relay:", activeRelayUrl);
+  document.getElementById('host-badge').innerText = "Role: Connecting to Relay...";
+  
+  try {
+    wsConnection = new WebSocket(activeRelayUrl);
+    
+    wsConnection.onopen = () => {
+      // Subscribe explicitly to kind 42 events matching our unique Room ID
+      const subscriptionRequest = ["REQ", "sub_" + window.playerId, {
+        "kinds": [42],
+        "#g": [multiplayerRoomId]
+      }];
+      wsConnection.send(JSON.stringify(subscriptionRequest));
+      
+      // Broadcast initial entry ping
+      sendNetworkPacket({ type: 'ping', id: window.playerId, sessionStartTime });
+    };
+
+    wsConnection.onmessage = (event) => {
+      try {
+        const rawData = JSON.parse(event.data);
+        // Nostr Envelope verification: ["EVENT", subscriptionId, eventObject]
+        if (rawData[0] === "EVENT" && rawData[2] && rawData[2].content) {
+          const msg = JSON.parse(rawData[2].content);
+          
+          if (!msg || msg.id === window.playerId) return;
+
+          if (msg.type === 'update') {
+            remotePlayersData[msg.id] = { x: msg.x, z: msg.z, angle: msg.angle, color: msg.color, name: msg.name, lastSeen: Date.now() };
+            roomPeers[msg.id] = msg.sessionStartTime;
+            determineHostRole();
+            updateRemotePlayerMesh(msg.id, msg.x, msg.z, msg.angle, msg.color, msg.name);
+          } 
+          else if (msg.type === 'leave') {
+            // Check if it's a player leaving or a resource picked up by someone else
+            const resIdx = resources.findIndex(r => r.id === msg.id);
+            if (resIdx !== -1) {
+              if (resources[resIdx].mesh) scene.remove(resources[resIdx].mesh);
+              resources.splice(resIdx, 1);
+            } else {
+              removeRemotePlayerMesh(msg.id);
+              delete remotePlayersData[msg.id];
+              delete roomPeers[msg.id];
+              determineHostRole();
+            }
+          } 
+          else if (msg.type === 'ping') {
+            roomPeers[msg.id] = msg.sessionStartTime;
+            determineHostRole();
+            broadcastLocalState();
+          }
+          else if (msg.type === 'worldSync' && !isHost) {
+            cycleTime = msg.cycleTime;
+            isNight = msg.isNight;
+            currentDay = msg.currentDay;
+            syncEnemiesFromHost(msg.enemies);
+            syncResourcesFromHost(msg.resources);
+          }
+        }
+      } catch (e) {
+        // Skip parsing errors from miscellaneous payload data on the public server
+      }
+    };
+
+    wsConnection.onerror = () => {
+      console.warn("Relay error, attempting fallback setup...");
+    };
+    
+    wsConnection.onclose = () => {
+      // Automatic reconnection management if connection drops out
+      setTimeout(setupMultiplayerChannel, 5000);
+    };
+
+  } catch(err) {
+    console.error("WebSocket structural initialization failure", err);
+  }
+}
+
+function sendNetworkPacket(payload) {
+  if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) return;
+  
+  // Create standardized ephemeral relay frame payload
+  const event = {
+    "kind": 42,
+    "created_at": Math.floor(Date.now() / 1000),
+    "tags": [["g", multiplayerRoomId]],
+    "content": JSON.stringify(payload),
+    "pubkey": "0000000000000000000000000000000000000000000000000000000000000000",
+    "id": "atoll_" + Math.random().toString(36).substr(2, 9)
+  };
+  wsConnection.send(JSON.stringify(["EVENT", event]));
+}
+
+function determineHostRole() {
+  let olderPeerExists = false;
+  for (let id in roomPeers) {
+    if (roomPeers[id] < sessionStartTime) olderPeerExists = true;
+    else if (roomPeers[id] === sessionStartTime && id < window.playerId) olderPeerExists = true;
+  }
+  isHost = !olderPeerExists;
+  document.getElementById('host-badge').innerText = isHost ? "Role: Room Host (Simulating World)" : "Role: Client (Synced)";
+}
+
+function broadcastLocalState() {
+  if (!player || !player.mesh) return;
+  sendNetworkPacket({
+    type: 'update', id: window.playerId, sessionStartTime,
+    x: player.x, z: player.z, angle: player.mesh.rotation.y, color: player.color, name: chosenName
+  });
+}
+
+function broadcastWorldState() {
+  if (!isHost) return;
+  sendNetworkPacket({
+    type: 'worldSync', id: window.playerId,
+    cycleTime, isNight, currentDay,
+    enemies: enemies.map(e => ({ id: e.id, x: e.x, z: e.z, hp: e.hp })),
+    resources: resources.map(r => ({ id: r.id, x: r.x, z: r.z, type: r.type }))
+  });
+}
+
+function initiateGameConnection() {
+  const userIn = document.getElementById('username').value.trim();
+  const roomIn = document.getElementById('room-id').value.trim();
+  chosenName = userIn ? userIn : "Mariner_" + window.playerId.substr(0,3);
+  multiplayerRoomId = roomIn ? roomIn : "atoll-oceanic-grid";
+  document.getElementById('ui-room-name').innerText = multiplayerRoomId;
+  document.getElementById('landing-page').style.opacity = 0;
+  setTimeout(() => {
+    document.getElementById('landing-page').style.display = 'none';
+    document.getElementById('canvas3d').style.display = 'block';
+    document.getElementById('game-ui').style.display = 'flex';
+    
+    // UI Layout adaptations if playing via Touch Interface / iPad
+    if (isTouchDevice) {
+      document.getElementById('mobile-dpad').style.display = 'grid';
+      document.getElementById('mobile-actions').style.display = 'flex';
+      document.getElementById('controls-notice').innerHTML = "Drag anywhere on screen to orbit view<br>Tap with a second finger to Fire / Shoot";
+      document.getElementById('crafting-instructions').innerText = "Radial Schematics (Use screen buttons to cycle and build)";
+    }
+
+    setupMultiplayerChannel();
+    init3DEngine();
+  }, 500);
+}
+
+// --- 3D ENGINE CONFIGURATION (HIGH VISIBILITY / THIRD PERSON) ---
+let scene, camera, renderer;
+let gameActive = false, lastTime = 0;
+
+let inventory = { wood: 12, coral: 6, scrap: 0, iron: 0, glow: 0 };
+let craftedWeapons = { spear: false, blaster: false };
+
+const recipes = [
+  { id: 'crafting_table', name: 'Crafting Table', type: 'structure', cost: { wood: 4, coral: 0, scrap: 0, iron: 0, glow: 0 }, requiresTable: false, color: 0xaa7a44, height: 1.5 },
+  { id: 'wood_wall',     name: 'Driftwood Wall',  type: 'structure', cost: { wood: 3, coral: 0, scrap: 0, iron: 0, glow: 0 }, requiresTable: false, color: 0x826642, height: 3.5 },
+  { id: 'shield_pylon',  name: 'Shield Pylon',    type: 'structure', cost: { wood: 5, coral: 5, scrap: 2, iron: 0, glow: 0 }, requiresTable: true,  color: 0x45a2bf, height: 4.5 },
+  { id: 'oxygen_sub',    name: 'O2 Substation',   type: 'structure', cost: { wood: 4, coral: 2, scrap: 0, iron: 3, glow: 0 }, requiresTable: true,  color: 0x3a86ff, height: 2.5 },
+  { id: 'harpoon_spear', name: 'Harpoon Launcher',type: 'weapon',    cost: { wood: 6, coral: 0, scrap: 4, iron: 2, glow: 0 }, requiresTable: true,  color: 0xf59e0b, weaponId: 'spear' },
+  { id: 'abyss_blaster', name: 'Abyssal Blaster', type: 'weapon',    cost: { wood: 0, coral: 4, scrap: 2, iron: 6, glow: 5 }, requiresTable: true,  color: 0xa855f7, weaponId: 'blaster' }
+];
+
+let buildIndex = 0, isNearTable = false;
+const islandRadius = 130; 
+
+let player = { 
+  x: 0, z: 0, y: 1.0, 
+  camAngle: 0, camPitch: 0.5, camRadius: 28,
+  hp: 100, maxHp: 100, shield: 0, maxShield: 100, oxygen: 100, maxOxygen: 100, 
+  speed: 24, mesh: null,
+  color: '#' + Math.floor(Math.random()*16777215).toString(16) 
+};
+
+let input = { w: false, a: false, s: false, d: false };
+let isDraggingCamera = false, prevMouseX = 0, prevMouseY = 0;
+
+let resources = [], structures = [], enemies = [], projectiles = [];
+let remotePlayerMeshes = {};
+let cycleTime = 0; const phaseDuration = 30; let currentDay = 1, isNight = false;
+
+let oceanFloor, islandMesh, ambientLight, directionalLight;
+
+function init3DEngine() {
+  const container = document.getElementById('canvas3d');
+  
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0e2637); 
+  scene.fog = new THREE.FogExp2(0x0e2637, 0.007); 
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  container.appendChild(renderer.domElement);
+
+  ambientLight = new THREE.AmbientLight(0x285973, 1.8);
+  scene.add(ambientLight);
+
+  directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+  directionalLight.position.set(40, 120, 30);
+  scene.add(directionalLight);
+
+  const floorGeo = new THREE.PlaneGeometry(1500, 1500);
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x071520, roughness: 0.8 });
+  oceanFloor = new THREE.Mesh(floorGeo, floorMat);
+  oceanFloor.rotation.x = -Math.PI / 2;
+  scene.add(oceanFloor);
+
+  const islandGeo = new THREE.CylinderGeometry(islandRadius, islandRadius, 0.6, 48);
+  const islandMat = new THREE.MeshStandardMaterial({ color: 0x225d5d, roughness: 0.7 });
+  islandMesh = new THREE.Mesh(islandGeo, islandMat);
+  islandMesh.position.y = 0.3;
+  scene.add(islandMesh);
+
+  const pGroup = new THREE.Group();
+  const bodyGeo = new THREE.ConeGeometry(1.2, 2.5, 4);
+  bodyGeo.rotateX(Math.PI / 2); 
+  const bodyMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(player.color), roughness: 0.4 });
+  const pBody = new THREE.Mesh(bodyGeo, bodyMat);
+  pGroup.add(pBody);
+  
+  const indGeo = new THREE.ConeGeometry(0.4, 0.8, 4);
+  indGeo.rotateX(Math.PI / 2);
+  const indMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const pInd = new THREE.Mesh(indGeo, indMat);
+  pInd.position.set(0, 0, 1.3);
+  pGroup.add(pInd);
+
+  pGroup.position.set(player.x, player.y, player.z);
+  scene.add(pGroup);
+  player.mesh = pGroup;
+
+  gameActive = true;
+  window.addEventListener('resize', onWindowResize);
+  setupThirdPersonControls();
+  setupMobileTouchEvents();
+
+  if (isHost) initResources();
+  setupUI();
+  updateUI();
+  
+  lastTime = performance.now();
+  requestAnimationFrame(tick3D);
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function setupThirdPersonControls() {
+  window.addEventListener('mousedown', (e) => {
+    if(!gameActive) return;
+    if (e.button === 0) { 
+      isDraggingCamera = true;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+    }
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isDraggingCamera || !gameActive) return;
+    let deltaX = e.clientX - prevMouseX;
+    let deltaY = e.clientY - prevMouseY;
+    prevMouseX = e.clientX;
+    prevMouseY = e.clientY;
+
+    player.camAngle += deltaX * 0.007;
+    player.camPitch += deltaY * 0.007;
+    player.camPitch = Math.max(0.1, Math.min(Math.PI / 2.3, player.camPitch)); 
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    if(e.button === 0) isDraggingCamera = false;
+  });
+  
+  window.addEventListener('click', (e) => {
+    if(isTouchDevice) return; // Managed separately via touch taps to avoid double triggers
+    firePlayerProjectile();
+  });
+}
+
+function firePlayerProjectile() {
+  if(!gameActive || !player.mesh) return;
+  if (!craftedWeapons.spear && !craftedWeapons.blaster) return;
+  
+  let lookAngle = player.mesh.rotation.y;
+  let vx = Math.sin(lookAngle);
+  let vz = Math.cos(lookAngle);
+
+  let pSpeed = craftedWeapons.blaster ? 60 : 40;
+  let pDamage = craftedWeapons.blaster ? 30 : 14;
+  let pColor = craftedWeapons.blaster ? 0xa855f7 : 0xf59e0b;
+  let pRadius = craftedWeapons.blaster ? 0.3 : 0.15;
+
+  let geo = new THREE.SphereGeometry(pRadius, 8, 8);
+  let mat = new THREE.MeshBasicMaterial({ color: pColor });
+  let mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(player.x, player.y + 0.5, player.z);
+  scene.add(mesh);
+
+  projectiles.push({
+    x: player.x, y: player.y + 0.5, z: player.z,
+    vx: vx * pSpeed, vy: 0, vz: vz * pSpeed,
+    damage: pDamage, range: 65, traveled: 0, mesh
+  });
+}
+
+// --- SPECIFIC MOBILE/TOUCH BINDINGS FOR CAMERA & HUD ---
+function setupMobileTouchEvents() {
+  if(!isTouchDevice) return;
+
+  // Orbit camera drag mapping for touches
+  window.addEventListener('touchstart', (e) => {
+    if(!gameActive) return;
+    // Don't interrupt interactions targets belonging to the mobile control pads
+    if(e.target.closest('#mobile-dpad') || e.target.closest('#mobile-actions') || e.target.closest('.recipe-card')) return;
+
+    let touch = e.touches[0];
+    isDraggingCamera = true;
+    prevMouseX = touch.clientX;
+    prevMouseY = touch.clientY;
+
+    // Multi-touch tracking: If a second finger touches while orbiting, fire weapon
+    if (e.touches.length > 1) {
+      firePlayerProjectile();
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (!isDraggingCamera || !gameActive) return;
+    let touch = e.touches[0];
+    let deltaX = touch.clientX - prevMouseX;
+    let deltaY = touch.clientY - prevMouseY;
+    prevMouseX = touch.clientX;
+    prevMouseY = touch.clientY;
+
+    player.camAngle += deltaX * 0.006;
+    player.camPitch += deltaY * 0.006;
+    player.camPitch = Math.max(0.1, Math.min(Math.PI / 2.3, player.camPitch));
+  }, { passive: true });
+
+  window.addEventListener('touchend', (e) => {
+    if(e.touches.length === 0) isDraggingCamera = false;
+  });
+
+  // Attach touch input routing for visible virtual HUD elements
+  const configureMobileBtn = (id, property) => {
+    const element = document.getElementById(id);
+    element.addEventListener('touchstart', (e) => { e.preventDefault(); input[property] = true; });
+    element.addEventListener('touchend', (e) => { e.preventDefault(); input[property] = false; });
+  };
+
+  configureMobileBtn('btn-up', 'w');
+  configureMobileBtn('btn-down', 's');
+  configureMobileBtn('btn-left', 'a');
+  configureMobileBtn('btn-right', 'd');
+
+  document.getElementById('btn-prev-recipe').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    buildIndex = (buildIndex - 1 + recipes.length) % recipes.length;
+    updateUI();
+  });
+
+  document.getElementById('btn-next-recipe').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    buildIndex = (buildIndex + 1) % recipes.length;
+    updateUI();
+  });
+
+  document.getElementById('btn-deploy').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    attemptBuildOrCraft();
+  });
+}
+
+function initResources() {
+  resources.forEach(r => { if(r.mesh) scene.remove(r.mesh); });
+  resources = [];
+  for(let i=0; i<16; i++) spawnResourceHost('wood', false); 
+  for(let i=0; i<10; i++) spawnResourceHost('coral', false); 
+  for(let i=0; i<6; i++) spawnResourceHost('scrap', false); 
+  for(let i=0; i<10; i++) spawnResourceHost('iron', true); 
+  for(let i=0; i<8; i++) spawnResourceHost('glow', true); 
+}
+
+function spawnResourceHost(type, deepSea = false) {
+  let angle = Math.random() * Math.PI * 2;
+  let dist = deepSea ? (islandRadius + 20 + Math.random() * 110) : (10 + Math.random() * (islandRadius - 20));
+  createResourceMesh(type, Math.cos(angle) * dist, Math.sin(angle) * dist, 'res_' + Math.random().toString(36).substr(2, 9));
+}
+
+function createResourceMesh(type, x, z, id) {
+  let color = 0xffffff; let size = 1.2; 
+  if(type === 'wood') { color = 0xb08d57; size = 1.0; }
+  else if(type === 'coral') { color = 0xff6b4a; size = 1.3; }
+  else if(type === 'scrap') { color = 0x8fa4ad; size = 0.9; }
+  else if(type === 'iron') { color = 0xa1a1a6; size = 1.2; }
+  else if(type === 'glow') { color = 0x3a86ff; size = 0.8; }
+
+  let geo = new THREE.DodecahedronGeometry(size);
+  let mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
+  if(type === 'glow') { mat.emissive = new THREE.Color(0x3a86ff); mat.emissiveIntensity = 0.9; }
+
+  let mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, size/2 + 0.4, z);
+  scene.add(mesh);
+  resources.push({ id, type, x, z, mesh });
+}
+
+function syncEnemiesFromHost(hostEnemies) {
+  enemies.forEach(e => { if(e.mesh) scene.remove(e.mesh); });
+  enemies = hostEnemies.map(h => {
+    let geo = new THREE.BoxGeometry(2.2, 2.2, 2.2);
+    let mat = new THREE.MeshStandardMaterial({ color: 0xff4b2b, emissive: 0xaa2200 });
+    let mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(h.x, 1.2, h.z);
+    scene.add(mesh);
+    return { ...h, mesh };
+  });
+}
+
+function syncResourcesFromHost(hostResources) {
+  resources.forEach(r => { if(r.mesh) scene.remove(r.mesh); });
+  resources = [];
+  hostResources.forEach(hr => createResourceMesh(hr.type, hr.x, hr.z, hr.id));
+}
+
+function updateRemotePlayerMesh(id, x, z, angle, color, name) {
+  if(!remotePlayerMeshes[id]) {
+    let geo = new THREE.ConeGeometry(1.2, 2.5, 4);
+    geo.rotateX(Math.PI / 2);
+    let mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(color) });
+    let mesh = new THREE.Mesh(geo, mat);
+    scene.add(mesh);
+    remotePlayerMeshes[id] = mesh;
+  }
+  let mesh = remotePlayerMeshes[id];
+  mesh.position.set(x, 1.2, z);
+  mesh.rotation.y = angle;
+}
+
+function removeRemotePlayerMesh(id) {
+  if(remotePlayerMeshes[id]) { scene.remove(remotePlayerMeshes[id]); delete remotePlayerMeshes[id]; }
+}
+
+function setupUI() {
+  const list = document.getElementById('recipe-list'); list.innerHTML = '';
+  recipes.forEach((rec, i) => {
+    let card = document.createElement('div'); card.className = `recipe-card ${i === buildIndex ? 'selected' : ''}`; card.id = `recipe-${i}`;
+    let costs = []; 
+    if(rec.cost.wood > 0) costs.push(`${rec.cost.wood}W`); if(rec.cost.coral > 0) costs.push(`${rec.cost.coral}C`); 
+    if(rec.cost.scrap > 0) costs.push(`${rec.cost.scrap}S`); if(rec.cost.iron > 0) costs.push(`${rec.cost.iron}I`);
+    if(rec.cost.glow > 0) costs.push(`${rec.cost.glow}G`);
+    card.innerHTML = `<div class="recipe-name">${rec.name}</div><div class="recipe-cost">${costs.join(' ')}</div><div style="font-size:8px; color:var(--bioglow); margin-top:2px;">${rec.requiresTable ? 'Requires Table' : 'Basic'}</div>`;
+    card.onclick = () => { if(gameActive) { buildIndex = i; updateUI(); } }; list.appendChild(card);
+  });
+}
+
+function updateUI() {
+  document.getElementById('res-wood').innerText = inventory.wood; document.getElementById('res-coral').innerText = inventory.coral; document.getElementById('res-scrap').innerText = inventory.scrap;
+  document.getElementById('res-iron').innerText = inventory.iron; document.getElementById('res-glow').innerText = inventory.glow;
+  document.getElementById('ui-day').innerText = currentDay; document.getElementById('ui-phase').innerText = isNight ? "ABYSSAL NIGHTFALL" : "BRIGHT DAYLIGHT";
+  document.getElementById('ui-timer').innerText = Math.ceil(phaseDuration - (cycleTime % phaseDuration));
+  document.getElementById('lbl-hp').innerText = Math.round(player.hp); document.getElementById('hp-fill').style.width = `${(player.hp/player.maxHp)*100}%`;
+  document.getElementById('lbl-shield').innerText = Math.round(player.shield); document.getElementById('shield-fill').style.width = `${(player.shield/player.maxShield)*100}%`;
+  document.getElementById('lbl-oxygen').innerText = Math.round(player.oxygen); document.getElementById('oxygen-fill').style.width = `${player.oxygen}%`;
+  
+  let wLabel = "WEAPON STATUS: UNARMED (Shoot via cross-tap if armed)";
+  if(!isTouchDevice) wLabel = "WEAPON STATUS: UNARMED (Left Click anywhere to shoot when armed)";
+  if (craftedWeapons.blaster) wLabel = "WEAPON STATUS: BLASTER ONLINE";
+  else if (craftedWeapons.spear) wLabel = "WEAPON STATUS: HARPOON ONLINE";
+  document.getElementById('weapon-status-panel').innerText = wLabel;
+  document.getElementById('weapon-status-panel').style.color = (craftedWeapons.spear || craftedWeapons.blaster) ? 'var(--bioglow)' : 'var(--coral)';
+
+  recipes.forEach((rec, i) => {
+    let card = document.getElementById(`recipe-${i}`); if(!card) return; card.className = `recipe-card ${i === buildIndex ? 'selected' : ''}`;
+    let isWeaponOwned = rec.type === 'weapon' && craftedWeapons[rec.weaponId];
+    if(inventory.wood < rec.cost.wood || inventory.coral < rec.cost.coral || inventory.scrap < rec.cost.scrap || inventory.iron < rec.cost.iron || inventory.glow < rec.cost.glow || (rec.requiresTable && !isNearTable) || isWeaponOwned) {
+      card.classList.add('locked');
+    }
+  });
+  const proxIndicator = document.getElementById('proximity-status'); proxIndicator.innerText = isNearTable ? "Near Active Workbench" : "Workbench Out of Range"; proxIndicator.className = isNearTable ? "table-indicator" : "table-missing";
+}
+
+window.addEventListener('keydown', (e) => {
+  if(!gameActive) return;
+  if(e.key.toLowerCase() === 'w') input.w = true; if(e.key.toLowerCase() === 's') input.s = true;
+  if(e.key.toLowerCase() === 'a') input.a = true; if(e.key.toLowerCase() === 'd') input.d = true;
+  
+  if(e.key.toLowerCase() === 'q') { buildIndex = (buildIndex - 1 + recipes.length) % recipes.length; updateUI(); }
+  if(e.key.toLowerCase() === 'e') { buildIndex = (buildIndex + 1) % recipes.length; updateUI(); }
+  if(e.key === ' ') { e.preventDefault(); attemptBuildOrCraft(); }
+});
+
+window.addEventListener('keyup', (e) => {
+  if(e.key.toLowerCase() === 'w') input.w = false; if(e.key.toLowerCase() === 's') input.s = false;
+  if(e.key.toLowerCase() === 'a') input.a = false; if(e.key.toLowerCase() === 'd') input.d = false;
+});
+
+function attemptBuildOrCraft() {
+  let recipe = recipes[buildIndex]; 
+  if ((recipe.requiresTable && !isNearTable) || inventory.wood < recipe.cost.wood || inventory.coral < recipe.cost.coral || inventory.scrap < recipe.cost.scrap || inventory.iron < recipe.cost.iron || inventory.glow < recipe.cost.glow) return;
+  
+  if (recipe.type === 'weapon') {
+    if (craftedWeapons[recipe.weaponId]) return;
+    craftedWeapons[recipe.weaponId] = true;
+  } else {
+    let lookAngle = player.mesh ? player.mesh.rotation.y : 0;
+    let bx = player.x + Math.sin(lookAngle) * 5.0;
+    let bz = player.z + Math.cos(lookAngle) * 5.0;
+    
+    let geo = new THREE.BoxGeometry(3, recipe.height, 3);
+    let mat = new THREE.MeshStandardMaterial({ color: recipe.color, roughness: 0.6 });
+    let mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(bx, recipe.height/2 + 0.3, bz);
+    scene.add(mesh);
+
+    structures.push({
+      id: 'struct_' + Math.random().toString(36).substr(2, 9),
+      type: recipe.id, x: bx, z: bz, height: recipe.height,
+      hp: recipe.id === 'wood_wall' ? 180 : 100, mesh
+    });
+  }
+
+  inventory.wood -= recipe.cost.wood; inventory.coral -= recipe.cost.coral; inventory.scrap -= recipe.cost.scrap; inventory.iron -= recipe.cost.iron; inventory.glow -= recipe.cost.glow;
+  updateUI();
+}
+
+// --- CYCLE LOOPS ---
+function tick3D(now) {
+  if(!gameActive) return; 
+  requestAnimationFrame(tick3D);
+  
+  let delta = (now - lastTime) / 1000;
+  if(delta > 0.1) delta = 0.1;
+  lastTime = now;
+
+  if (isHost) {
+    cycleTime += delta;
+    let nightCheck = (Math.floor(cycleTime / phaseDuration) % 2 === 1);
+    if(nightCheck !== isNight) {
+      isNight = nightCheck;
+      if(!isNight) {
+        currentDay++;
+        spawnResourceHost('wood', false); spawnResourceHost('coral', false);
+        if(Math.random() > 0.4) spawnResourceHost('iron', true);
+        if(Math.random() > 0.4) spawnResourceHost('glow', true);
+      }
+      
+      if(isNight) {
+        scene.background.setHex(0x06121b);
+        scene.fog.color.setHex(0x06121b);
+        ambientLight.color.setHex(0x1a3a4e);
+      } else {
+        scene.background.setHex(0x0e2637);
+        scene.fog.color.setHex(0x0e2637);
+        ambientLight.color.setHex(0x285973);
+      }
+      updateUI();
+    }
+    processHostEnemySimulation(delta);
+    broadcastWorldState();
+  }
+
+  let moveX = 0, moveZ = 0;
+  if(input.w) { moveX += Math.sin(player.camAngle); moveZ += Math.cos(player.camAngle); }
+  if(input.s) { moveX -= Math.sin(player.camAngle); moveZ -= Math.cos(player.camAngle); }
+  if(input.a) { moveX += Math.sin(player.camAngle + Math.PI/2); moveZ += Math.cos(player.camAngle + Math.PI/2); }
+  if(input.d) { moveX -= Math.sin(player.camAngle + Math.PI/2); moveZ -= Math.cos(player.camAngle + Math.PI/2); }
+
+  if(moveX !== 0 || moveZ !== 0) {
+    let len = Math.hypot(moveX, moveZ);
+    let dx = (moveX / len) * player.speed * delta;
+    let dz = (moveZ / len) * player.speed * delta;
+    
+    player.x += dx;
+    player.z += dz;
+    
+    if(player.mesh) {
+      player.mesh.rotation.y = Math.atan2(dx, dz);
+    }
+
+    let currentDist = Math.hypot(player.x, player.z);
+    if(currentDist > 400) {
+      let angle = Math.atan2(player.z, player.x);
+      player.x = Math.cos(angle) * 400; 
+      player.z = Math.sin(angle) * 400;
+    }
+  }
+
+  if(player.mesh) {
+    player.mesh.position.set(player.x, player.y, player.z);
+  }
+
+  let camX = player.x - Math.sin(player.camAngle) * Math.cos(player.camPitch) * player.camRadius;
+  let camY = player.y + Math.sin(player.camPitch) * player.camRadius + 1.5;
+  let camZ = player.z - Math.cos(player.camAngle) * Math.cos(player.camPitch) * player.camRadius;
+  
+  camera.position.set(camX, camY, camZ);
+  camera.lookAt(player.x, player.y + 1.2, player.z);
+  
+  broadcastLocalState();
+
+  let distFromIsland = Math.hypot(player.x, player.z);
+  let nearO2Substation = false;
+  structures.forEach(s => {
+    if(s.type === 'oxygen_sub' && Math.hypot(player.x - s.x, player.z - s.z) < 12) nearO2Substation = true;
+  });
+
+  if (distFromIsland > islandRadius && !nearO2Substation) {
+    document.getElementById('oxygen-container').style.display = 'block';
+    player.oxygen = Math.max(0, player.oxygen - 14 * delta);
+    if(player.oxygen <= 0) {
+      player.hp -= 12 * delta;
+      updateUI();
+      if(player.hp <= 0) gameOver();
+    }
+    updateUI();
+  } else {
+    if(player.oxygen < 100) {
+      player.oxygen = Math.min(100, player.oxygen + 45 * delta);
+      updateUI();
+      if(player.oxygen >= 100 && distFromIsland <= islandRadius) document.getElementById('oxygen-container').style.display = 'none';
+    }
+  }
+
+  resources.forEach((res, idx) => {
+    if(Math.hypot(player.x - res.x, player.z - res.z) < 3.2) {
+      inventory[res.type] = (inventory[res.type] || 0) + 2;
+      sendNetworkPacket({ type: 'leave', id: res.id }); 
+      if (res.mesh) scene.remove(res.mesh);
+      resources.splice(idx, 1);
+      updateUI();
+    }
+  });
+
+  let nearTableCheck = false;
+  let shieldGen = 0;
+  structures.forEach(s => {
+    if(s.type === 'crafting_table' && Math.hypot(player.x - s.x, player.z - s.z) < 7.5) nearTableCheck = true;
+    if(s.type === 'shield_pylon' && Math.hypot(player.x - s.x, player.z - s.z) < 18.0) shieldGen += 10 * delta;
+  });
+  if(nearTableCheck !== isNearTable) { isNearTable = nearTableCheck; updateUI(); }
+  if(shieldGen > 0) { player.shield = Math.min(player.maxShield, player.shield + shieldGen); updateUI(); }
+
+  projectiles.forEach((p, idx) => {
+    p.x += p.vx * delta; p.y += p.vy * delta; p.z += p.vz * delta;
+    p.traveled += Math.hypot(p.vx * delta, p.vz * delta);
+    if(p.mesh) p.mesh.position.set(p.x, p.y, p.z);
+    
+    enemies.forEach((en) => {
+      if(Math.hypot(p.x - en.x, p.z - en.z) < 2.8) {
+        en.hp -= p.damage;
+        p.traveled = p.range + 99;
+        if(en.hp <= 0 && isHost) { inventory.scrap += 2; updateUI(); }
+      }
+    });
+    
+    if(p.traveled >= p.range) {
+      if(p.mesh) scene.remove(p.mesh);
+      projectiles.splice(idx, 1);
+    }
+  });
+
+  renderer.render(scene, camera);
+}
+
+function processHostEnemySimulation(delta) {
+  if (!isNight) { 
+    enemies.forEach(e => { if(e.mesh) scene.remove(e.mesh); });
+    enemies = []; return; 
+  }
+  
+  let maxAllowed = currentDay * 3 + 3;
+  if (enemies.length < maxAllowed && Math.random() < 0.05) {
+    let ang = Math.random() * Math.PI * 2;
+    let sDist = islandRadius + 60;
+    let ex = Math.cos(ang) * sDist;
+    let ez = Math.sin(ang) * sDist;
+
+    let geo = new THREE.BoxGeometry(2.2, 2.2, 2.2);
+    let mat = new THREE.MeshStandardMaterial({ color: 0xff4b2b });
+    let mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(ex, 1.1, ez);
+    scene.add(mesh);
+
+    enemies.push({
+      id: 'en_' + Math.random().toString(36).substr(2, 9),
+      x: ex, z: ez, hp: 30 + currentDay * 5, speed: 14 + Math.random() * 7, mesh
+    });
+  }
+
+  enemies.forEach((en, idx) => {
+    let targets = [{ x: player.x, z: player.z, isPlayer: true }];
+    Object.keys(remotePlayersData).forEach(id => targets.push({ x: remotePlayersData[id].x, z: remotePlayersData[id].z, isPlayer: false }));
+    
+    let nearest = null, minDist = Infinity;
+    targets.forEach(t => {
+      let d = Math.hypot(en.x - t.x, en.z - t.z);
+      if(d < minDist) { minDist = d; nearest = t; }
+    });
+
+    if(nearest) {
+      let ang = Math.atan2(nearest.z - en.z, nearest.x - en.x);
+      en.x += Math.cos(ang) * en.speed * delta;
+      en.z += Math.sin(ang) * en.speed * delta;
+      if(en.mesh) en.mesh.position.set(en.x, 1.1, en.z);
+
+      if(minDist < 3.0) {
+        if(nearest.isPlayer) {
+          if(player.shield > 0) player.shield = Math.max(0, player.shield - 35 * delta);
+          else player.hp -= 20 * delta;
+          updateUI();
+          if(player.hp <= 0) gameOver();
+        }
+      }
+    }
+    
+    if (en.hp <= 0) {
+      if(en.mesh) scene.remove(en.mesh);
+      enemies.splice(idx, 1);
+    }
+  });
+}
+
+function gameOver() { 
+  gameActive = false; 
+  document.getElementById('death-days').innerText = currentDay; 
+  document.getElementById('death-screen').classList.add('active'); 
+}
+
+function resetGame() {
+  projectiles.forEach(p => { if(p.mesh) scene.remove(p.mesh); });
+  structures.forEach(s => { if(s.mesh) scene.remove(s.mesh); });
+  enemies.forEach(e => { if(e.mesh) scene.remove(e.mesh); });
+  resources.forEach(r => { if(r.mesh) scene.remove(r.mesh); });
+
+  projectiles = []; structures = []; enemies = []; resources = [];
+  if(isHost) initResources();
+  
+  player.x = 0; player.z = 0; player.hp = 100; player.shield = 0; player.oxygen = 100;
+  player.camAngle = 0; player.camPitch = 0.5;
+  inventory = { wood: 12, coral: 6, scrap: 0, iron: 0, glow: 0 };
+  craftedWeapons = { spear: false, blaster: false };
+  cycleTime = 0; currentDay = 1; isNight = false; buildIndex = 0;
+  
+  document.getElementById('death-screen').classList.remove('active');
+  document.getElementById('oxygen-container').style.display = 'none';
+  
+  scene.background.setHex(0x0e2637);
+  scene.fog.color.setHex(0x0e2637);
+  ambientLight.color.setHex(0x285973);
+
+  gameActive = true; updateUI(); lastTime = performance.now(); tick3D(lastTime);
+}
+</script>
+</body>
+</html>
