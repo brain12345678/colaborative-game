@@ -446,55 +446,45 @@ let chosenName = 'Mariner';
 window.playerId = 'p_' + Math.random().toString(36).substr(2, 9);
 const sessionStartTime = Date.now();
 
-let networkChannel = null;
+let networkChannel;
 let remotePlayersData = {}; 
 let isHost = true; 
 let roomPeers = {};
 
-// Robust Touch / iPadOS Device Check
 const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
 
 function setupMultiplayerChannel() {
-  try {
-    networkChannel = new BroadcastChannel(`atoll_channel_3d_tp_${multiplayerRoomId}`);
-    networkChannel.onmessage = (event) => {
-      const msg = event.data;
-      if (!msg || !msg.id || msg.id === window.playerId) return;
+  networkChannel = new BroadcastChannel(`atoll_channel_3d_tp_${multiplayerRoomId}`);
+  networkChannel.onmessage = (event) => {
+    const msg = event.data;
+    if (!msg || !msg.id || msg.id === window.playerId) return;
 
-      if (msg.type === 'update') {
-        remotePlayersData[msg.id] = { x: msg.x, z: msg.z, angle: msg.angle, color: msg.color, name: msg.name, lastSeen: Date.now() };
-        roomPeers[msg.id] = msg.sessionStartTime;
-        determineHostRole();
-        updateRemotePlayerMesh(msg.id, msg.x, msg.z, msg.angle, msg.color, msg.name);
-      } 
-      else if (msg.type === 'leave') {
-        removeRemotePlayerMesh(msg.id);
-        delete remotePlayersData[msg.id];
-        delete roomPeers[msg.id];
-        determineHostRole();
-      } 
-      else if (msg.type === 'ping') {
-        roomPeers[msg.id] = msg.sessionStartTime;
-        determineHostRole();
-        broadcastLocalState();
-      }
-      else if (msg.type === 'worldSync' && !isHost) {
-        cycleTime = msg.cycleTime;
-        isNight = msg.isNight;
-        currentDay = msg.currentDay;
-        syncEnemiesFromHost(msg.enemies);
-        syncResourcesFromHost(msg.resources);
-      }
-    };
-    networkChannel.postMessage({ type: 'ping', id: window.playerId, sessionStartTime });
-  } catch (error) {
-    console.warn("Multiplayer configuration failed due to environment security sandbox restrictions. Falling back gracefully to Local Sandbox Mode.", error);
-    networkChannel = null;
-    isHost = true; 
-    if (document.getElementById('host-badge')) {
-      document.getElementById('host-badge').innerText = "Role: Solo Mode (Sandbox)";
+    if (msg.type === 'update') {
+      remotePlayersData[msg.id] = { x: msg.x, z: msg.z, angle: msg.angle, color: msg.color, name: msg.name, lastSeen: Date.now() };
+      roomPeers[msg.id] = msg.sessionStartTime;
+      determineHostRole();
+      updateRemotePlayerMesh(msg.id, msg.x, msg.z, msg.angle, msg.color, msg.name);
+    } 
+    else if (msg.type === 'leave') {
+      removeRemotePlayerMesh(msg.id);
+      delete remotePlayersData[msg.id];
+      delete roomPeers[msg.id];
+      determineHostRole();
+    } 
+    else if (msg.type === 'ping') {
+      roomPeers[msg.id] = msg.sessionStartTime;
+      determineHostRole();
+      broadcastLocalState();
     }
-  }
+    else if (msg.type === 'worldSync' && !isHost) {
+      cycleTime = msg.cycleTime;
+      isNight = msg.isNight;
+      currentDay = msg.currentDay;
+      syncEnemiesFromHost(msg.enemies);
+      syncResourcesFromHost(msg.resources);
+    }
+  };
+  networkChannel.postMessage({ type: 'ping', id: window.playerId, sessionStartTime });
 }
 
 function determineHostRole() {
@@ -508,25 +498,21 @@ function determineHostRole() {
 }
 
 function broadcastLocalState() {
-  if (!networkChannel) return;
-  try {
-    networkChannel.postMessage({
-      type: 'update', id: window.playerId, sessionStartTime,
-      x: player.x, z: player.z, angle: player.mesh ? player.mesh.rotation.y : 0, color: player.color, name: chosenName
-    });
-  } catch(e) {}
+  if (!networkChannel || !player || !player.mesh) return;
+  networkChannel.postMessage({
+    type: 'update', id: window.playerId, sessionStartTime,
+    x: player.x, z: player.z, angle: player.mesh.rotation.y, color: player.color, name: chosenName
+  });
 }
 
 function broadcastWorldState() {
   if (!networkChannel || !isHost) return;
-  try {
-    networkChannel.postMessage({
-      type: 'worldSync', id: window.playerId,
-      cycleTime, isNight, currentDay,
-      enemies: enemies.map(e => ({ id: e.id, x: e.x, z: e.z, hp: e.hp })),
-      resources: resources.map(r => ({ id: r.id, x: r.x, z: r.z, type: r.type }))
-    });
-  } catch(e) {}
+  networkChannel.postMessage({
+    type: 'worldSync', id: window.playerId,
+    cycleTime, isNight, currentDay,
+    enemies: enemies.map(e => ({ id: e.id, x: e.x, z: e.z, hp: e.hp })),
+    resources: resources.map(r => ({ id: r.id, x: r.x, z: r.z, type: r.type }))
+  });
 }
 
 function initiateGameConnection() {
@@ -548,12 +534,12 @@ function initiateGameConnection() {
       document.getElementById('crafting-instructions').innerText = "Radial Schematics (Use screen buttons to cycle and build)";
     }
 
-    setupMultiplayerChannel();
     init3DEngine();
+    setupMultiplayerChannel();
   }, 500);
 }
 
-// --- 3D ENGINE CONFIGURATION (HIGH VISIBILITY / THIRD PERSON) ---
+// --- 3D ENGINE CONFIGURATION ---
 let scene, camera, renderer;
 let gameActive = false, lastTime = 0;
 
@@ -815,6 +801,7 @@ function createResourceMesh(type, x, z, id) {
 }
 
 function syncEnemiesFromHost(hostEnemies) {
+  if(!hostEnemies) return;
   enemies.forEach(e => { if(e.mesh) scene.remove(e.mesh); });
   enemies = hostEnemies.map(h => {
     let geo = new THREE.BoxGeometry(2.2, 2.2, 2.2);
@@ -827,6 +814,7 @@ function syncEnemiesFromHost(hostEnemies) {
 }
 
 function syncResourcesFromHost(hostResources) {
+  if(!hostResources) return;
   resources.forEach(r => { if(r.mesh) scene.remove(r.mesh); });
   resources = [];
   hostResources.forEach(hr => createResourceMesh(hr.type, hr.x, hr.z, hr.id));
@@ -933,6 +921,7 @@ function attemptBuildOrCraft() {
   updateUI();
 }
 
+// --- CYCLE LOOPS ---
 function tick3D(now) {
   if(!gameActive) return; 
   requestAnimationFrame(tick3D);
@@ -1030,17 +1019,16 @@ function tick3D(now) {
     }
   }
 
-  resources.forEach((res, idx) => {
+  for (let i = resources.length - 1; i >= 0; i--) {
+    let res = resources[i];
     if(Math.hypot(player.x - res.x, player.z - res.z) < 3.2) {
       inventory[res.type] = (inventory[res.type] || 0) + 2;
-      if (networkChannel) {
-        try { networkChannel.postMessage({ type: 'leave', id: res.id }); } catch(e) {}
-      }
+      if (networkChannel) networkChannel.postMessage({ type: 'leave', id: res.id }); 
       if (res.mesh) scene.remove(res.mesh);
-      resources.splice(idx, 1);
+      resources.splice(i, 1);
       updateUI();
     }
-  });
+  }
 
   let nearTableCheck = false;
   let shieldGen = 0;
@@ -1051,7 +1039,8 @@ function tick3D(now) {
   if(nearTableCheck !== isNearTable) { isNearTable = nearTableCheck; updateUI(); }
   if(shieldGen > 0) { player.shield = Math.min(player.maxShield, player.shield + shieldGen); updateUI(); }
 
-  projectiles.forEach((p, idx) => {
+  for (let idx = projectiles.length - 1; idx >= 0; idx--) {
+    let p = projectiles[idx];
     p.x += p.vx * delta; p.y += p.vy * delta; p.z += p.vz * delta;
     p.traveled += Math.hypot(p.vx * delta, p.vz * delta);
     if(p.mesh) p.mesh.position.set(p.x, p.y, p.z);
@@ -1068,7 +1057,7 @@ function tick3D(now) {
       if(p.mesh) scene.remove(p.mesh);
       projectiles.splice(idx, 1);
     }
-  });
+  }
 
   renderer.render(scene, camera);
 }
@@ -1098,7 +1087,8 @@ function processHostEnemySimulation(delta) {
     });
   }
 
-  enemies.forEach((en, idx) => {
+  for (let idx = enemies.length - 1; idx >= 0; idx--) {
+    let en = enemies[idx];
     let targets = [{ x: player.x, z: player.z, isPlayer: true }];
     Object.keys(remotePlayersData).forEach(id => targets.push({ x: remotePlayersData[id].x, z: remotePlayersData[id].z, isPlayer: false }));
     
@@ -1128,7 +1118,7 @@ function processHostEnemySimulation(delta) {
       if(en.mesh) scene.remove(en.mesh);
       enemies.splice(idx, 1);
     }
-  });
+  }
 }
 
 function gameOver() { 
