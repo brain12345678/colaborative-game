@@ -441,119 +441,101 @@
 
 <script>
 // --- INTERNET MULTIPLAYER LAYER CORE ---
+// Import the official Supabase Client JS Engine
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+
+// Explicitly bind your custom project credentials
+window.ATOLL_SUPABASE_URL = "https://ndjgohctnkpmlawaznjf.supabase.co";
+window.ATOLL_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kamdvaGN0bmtwbWxhd2F6bmpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2MTY2MzMsImV4cCI6MjA5OTE5MjYzM30.HEdfZcFIFqwDCQ85sUkbeO40uA2PyVvKL8x84LPYunk";
+
 let multiplayerRoomId = 'atoll-solo';
 let chosenName = 'Mariner';
 window.playerId = 'p_' + Math.random().toString(36).substr(2, 9);
 const sessionStartTime = Date.now();
 
-let wsConnection;
+// Instantiate the dedicated cloud client
+const supabaseClient = window.supabase.createClient(window.ATOLL_SUPABASE_URL, window.ATOLL_SUPABASE_ANON_KEY);
+let realtimeChannel = null;
+
 let remotePlayersData = {}; 
 let isHost = true; 
 let roomPeers = {};
-
-// Public pool of WebSockets to distribute internet packets across devices
-const PUBLIC_RELAYS = [
-  "wss://relay.damus.io",
-  "wss://nos.lol",
-  "wss://relay.nostr.band"
-];
-let activeRelayUrl = PUBLIC_RELAYS[Math.floor(Math.random() * PUBLIC_RELAYS.length)];
 
 // Robust Touch / iPadOS Device Check
 const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
 
 function setupMultiplayerChannel() {
-  console.log("Connecting to internet relay:", activeRelayUrl);
-  document.getElementById('host-badge').innerText = "Role: Connecting to Relay...";
+  console.log("Connecting to Supabase Realtime Hub Room:", multiplayerRoomId);
+  document.getElementById('host-badge').innerText = "Role: Synchronizing Channel...";
   
-  try {
-    wsConnection = new WebSocket(activeRelayUrl);
-    
-    wsConnection.onopen = () => {
-      // Subscribe explicitly to kind 42 events matching our unique Room ID
-      const subscriptionRequest = ["REQ", "sub_" + window.playerId, {
-        "kinds": [42],
-        "#g": [multiplayerRoomId]
-      }];
-      wsConnection.send(JSON.stringify(subscriptionRequest));
-      
-      // Broadcast initial entry ping
-      sendNetworkPacket({ type: 'ping', id: window.playerId, sessionStartTime });
-    };
+  // Create a fast, low-latency Broadcast & Presence Channel mapped to your room name
+  realtimeChannel = supabaseClient.channel(`room_${multiplayerRoomId}`, {
+    config: {
+      broadcast: { self: false },
+      presence: { key: window.playerId }
+    }
+  });
 
-    wsConnection.onmessage = (event) => {
-      try {
-        const rawData = JSON.parse(event.data);
-        // Nostr Envelope verification: ["EVENT", subscriptionId, eventObject]
-        if (rawData[0] === "EVENT" && rawData[2] && rawData[2].content) {
-          const msg = JSON.parse(rawData[2].content);
-          
-          if (!msg || msg.id === window.playerId) return;
+  // Wire up incoming WebSocket packet handlers
+  realtimeChannel
+    .on('broadcast', { event: 'game_event' }, ({ payload: msg }) => {
+      if (!msg || msg.id === window.playerId) return;
 
-          if (msg.type === 'update') {
-            remotePlayersData[msg.id] = { x: msg.x, z: msg.z, angle: msg.angle, color: msg.color, name: msg.name, lastSeen: Date.now() };
-            roomPeers[msg.id] = msg.sessionStartTime;
-            determineHostRole();
-            updateRemotePlayerMesh(msg.id, msg.x, msg.z, msg.angle, msg.color, msg.name);
-          } 
-          else if (msg.type === 'leave') {
-            // Check if it's a player leaving or a resource picked up by someone else
-            const resIdx = resources.findIndex(r => r.id === msg.id);
-            if (resIdx !== -1) {
-              if (resources[resIdx].mesh) scene.remove(resources[resIdx].mesh);
-              resources.splice(resIdx, 1);
-            } else {
-              removeRemotePlayerMesh(msg.id);
-              delete remotePlayersData[msg.id];
-              delete roomPeers[msg.id];
-              determineHostRole();
-            }
-          } 
-          else if (msg.type === 'ping') {
-            roomPeers[msg.id] = msg.sessionStartTime;
-            determineHostRole();
-            broadcastLocalState();
-          }
-          else if (msg.type === 'worldSync' && !isHost) {
-            cycleTime = msg.cycleTime;
-            isNight = msg.isNight;
-            currentDay = msg.currentDay;
-            syncEnemiesFromHost(msg.enemies);
-            syncResourcesFromHost(msg.resources);
-          }
+      if (msg.type === 'update') {
+        remotePlayersData[msg.id] = { x: msg.x, z: msg.z, angle: msg.angle, color: msg.color, name: msg.name, lastSeen: Date.now() };
+        roomPeers[msg.id] = msg.sessionStartTime;
+        determineHostRole();
+        updateRemotePlayerMesh(msg.id, msg.x, msg.z, msg.angle, msg.color, msg.name);
+      } 
+      else if (msg.type === 'leave') {
+        const resIdx = resources.findIndex(r => r.id === msg.id);
+        if (resIdx !== -1) {
+          if (resources[resIdx].mesh) scene.remove(resources[resIdx].mesh);
+          resources.splice(resIdx, 1);
+        } else {
+          removeRemotePlayerMesh(msg.id);
+          delete remotePlayersData[msg.id];
+          delete roomPeers[msg.id];
+          determineHostRole();
         }
-      } catch (e) {
-        // Skip parsing errors from miscellaneous payload data on the public server
+      } 
+      else if (msg.type === 'ping') {
+        roomPeers[msg.id] = msg.sessionStartTime;
+        determineHostRole();
+        broadcastLocalState();
+      } 
+      else if (msg.type === 'worldSync') {
+        roomPeers[msg.id] = msg.sessionStartTime;
+        determineHostRole();
+        if (!isHost) {
+          cycleTime = msg.cycleTime;
+          isNight = msg.isNight;
+          currentDay = msg.currentDay;
+          syncEnemiesFromHost(msg.enemies);
+          syncResourcesFromHost(msg.resources);
+        }
       }
-    };
-
-    wsConnection.onerror = () => {
-      console.warn("Relay error, attempting fallback setup...");
-    };
-    
-    wsConnection.onclose = () => {
-      // Automatic reconnection management if connection drops out
-      setTimeout(setupMultiplayerChannel, 5000);
-    };
-
-  } catch(err) {
-    console.error("WebSocket structural initialization failure", err);
-  }
+    })
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        document.getElementById('host-badge').innerText = "Role: Connected to Supabase Engine";
+        // Transmit an initial arrival announcement down the wire
+        sendNetworkPacket({ type: 'ping', id: window.playerId, sessionStartTime });
+      }
+    });
 }
 
 function sendNetworkPacket(payload) {
-  if (!wsConnection || wsConnection.readyState !== WebSocket.OPEN) return;
+  if (!realtimeChannel) return;
   
-  // Create standardized ephemeral relay frame payload
-  const event = {
-    "kind": 42,
-    "created_at": Math.floor(Date.now() / 1000),
-    "tags": [["g", multiplayerRoomId]],
-    "content": JSON.stringify(payload),
-    "pubkey": "0000000000000000000000000000000000000000000000000000000000000000",
-    "id": "atoll_" + Math.random().toString(36).substr(2, 9)
-  };
-  wsConnection.send(JSON.stringify(["EVENT", event]));
+  // Forward game metrics smoothly across players via Broadcast
+  realtimeChannel.send({
+    type: 'broadcast',
+    event: 'game_event',
+    payload: payload
+  });
 }
 
 function determineHostRole() {
@@ -608,7 +590,6 @@ function initiateGameConnection() {
     init3DEngine();
   }, 500);
 }
-
 // --- 3D ENGINE CONFIGURATION (HIGH VISIBILITY / THIRD PERSON) ---
 let scene, camera, renderer;
 let gameActive = false, lastTime = 0;
