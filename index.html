@@ -276,7 +276,7 @@ let chosenName = 'Mariner';
 window.playerId = 'p_' + Math.random().toString(36).substr(2, 9);
 const sessionStartTime = Date.now();
 
-const supabaseClient = window.supabase.createClient(window.ATOLL_SUPABASE_URL, window.ATOLL_SUPABASE_ANON_KEY);
+let supabaseClient = null;
 let realtimeChannel = null;
 
 let remotePlayersData = {}; 
@@ -287,65 +287,72 @@ let lastBroadcastTime = 0;
 const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
 function setupMultiplayerChannel() {
-  realtimeChannel = supabaseClient.channel(`room_${multiplayerRoomId}`, {
-    config: { broadcast: { self: false }, presence: { key: window.playerId } }
-  });
-
-  realtimeChannel
-    .on('broadcast', { event: 'game_event' }, ({ payload: msg }) => {
-      if (!msg || msg.id === window.playerId) return;
-
-      if (msg.type === 'update') {
-        remotePlayersData[msg.id] = { x: msg.x, z: msg.z, angle: msg.angle, color: msg.color, name: msg.name, lastSeen: Date.now() };
-        roomPeers[msg.id] = msg.sessionStartTime;
-        determineHostRole();
-        updateRemotePlayerMesh(msg.id, msg.x, msg.z, msg.angle, msg.color, msg.name);
-      } 
-      else if (msg.type === 'leave') {
-        const resIdx = resources.findIndex(r => r.id === msg.id);
-        if (resIdx !== -1) {
-          if (resources[resIdx].mesh) scene.remove(resources[resIdx].mesh);
-          resources.splice(resIdx, 1);
-        } else {
-          removeRemotePlayerMesh(msg.id);
-          delete remotePlayersData[msg.id];
-          delete roomPeers[msg.id];
-          determineHostRole();
-        }
-      } 
-      else if (msg.type === 'build') {
-        spawnStructureFromNetwork(msg.structureType, msg.x, msg.z, msg.rotation, msg.structId);
-      }
-      else if (msg.type === 'structDmg') {
-        const target = structures.find(s => s.id === msg.structId);
-        if (target) {
-          target.hp = msg.hp;
-          if (target.hp <= 0) removeStructure(target);
-        }
-      }
-      else if (msg.type === 'ping') {
-        roomPeers[msg.id] = msg.sessionStartTime;
-        determineHostRole();
-        broadcastLocalState();
-      } 
-      else if (msg.type === 'worldSync') {
-        roomPeers[msg.id] = msg.sessionStartTime;
-        determineHostRole();
-        if (!isHost) {
-          cycleTime = msg.cycleTime;
-          isNight = msg.isNight;
-          currentDay = msg.currentDay;
-          syncEnemiesFromHost(msg.enemies);
-          syncResourcesFromHost(msg.resources);
-          syncStructuresFromHost(msg.structures);
-        }
-      }
-    })
-    .subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        sendNetworkPacket({ type: 'ping', id: window.playerId, sessionStartTime });
-      }
+  try {
+    supabaseClient = window.supabase.createClient(window.ATOLL_SUPABASE_URL, window.ATOLL_SUPABASE_ANON_KEY);
+    realtimeChannel = supabaseClient.channel(`room_${multiplayerRoomId}`, {
+      config: { broadcast: { self: false }, presence: { key: window.playerId } }
     });
+
+    realtimeChannel
+      .on('broadcast', { event: 'game_event' }, ({ payload: msg }) => {
+        if (!msg || msg.id === window.playerId) return;
+
+        if (msg.type === 'update') {
+          remotePlayersData[msg.id] = { x: msg.x, z: msg.z, angle: msg.angle, color: msg.color, name: msg.name, lastSeen: Date.now() };
+          roomPeers[msg.id] = msg.sessionStartTime;
+          determineHostRole();
+          updateRemotePlayerMesh(msg.id, msg.x, msg.z, msg.angle, msg.color, msg.name);
+        } 
+        else if (msg.type === 'leave') {
+          const resIdx = resources.findIndex(r => r.id === msg.id);
+          if (resIdx !== -1) {
+            if (resources[resIdx].mesh) scene.remove(resources[resIdx].mesh);
+            resources.splice(resIdx, 1);
+          } else {
+            removeRemotePlayerMesh(msg.id);
+            delete remotePlayersData[msg.id];
+            delete roomPeers[msg.id];
+            determineHostRole();
+          }
+        } 
+        else if (msg.type === 'build') {
+          spawnStructureFromNetwork(msg.structureType, msg.x, msg.z, msg.rotation, msg.structId);
+        }
+        else if (msg.type === 'structDmg') {
+          const target = structures.find(s => s.id === msg.structId);
+          if (target) {
+            target.hp = msg.hp;
+            if (target.hp <= 0) removeStructure(target);
+          }
+        }
+        else if (msg.type === 'ping') {
+          roomPeers[msg.id] = msg.sessionStartTime;
+          determineHostRole();
+          broadcastLocalState();
+        } 
+        else if (msg.type === 'worldSync') {
+          roomPeers[msg.id] = msg.sessionStartTime;
+          determineHostRole();
+          if (!isHost) {
+            cycleTime = msg.cycleTime;
+            isNight = msg.isNight;
+            currentDay = msg.currentDay;
+            syncEnemiesFromHost(msg.enemies);
+            syncResourcesFromHost(msg.resources);
+            syncStructuresFromHost(msg.structures);
+          }
+        }
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          sendNetworkPacket({ type: 'ping', id: window.playerId, sessionStartTime });
+        }
+      });
+  } catch (e) {
+    console.warn("Supabase initialization bypassed or unavailable. Transitioning to local simulation sandbox.");
+    isHost = true;
+    document.getElementById('host-badge').innerText = "Role: Sandbox Host (Offline Mode)";
+  }
 }
 
 function sendNetworkPacket(payload) {
@@ -354,6 +361,7 @@ function sendNetworkPacket(payload) {
 }
 
 function determineHostRole() {
+  if (!realtimeChannel) { isHost = true; return; }
   let olderPeerExists = false;
   for (let id in roomPeers) {
     if (roomPeers[id] < sessionStartTime) olderPeerExists = true;
@@ -412,12 +420,12 @@ function initiateGameConnection() {
 let scene, camera, renderer;
 let gameActive = false, lastTime = 0;
 
-let inventory = { wood: 20, coral: 15, scrap: 10, iron: 5, glow: 2, rations: 2 };
+let inventory = { wood: 40, coral: 25, scrap: 20, iron: 15, glow: 5, rations: 2 };
 let craftedWeapons = { spear: false, blaster: false };
 let currentSchematic = 'none'; 
 
 let player = {
-  x: 0, z: 0, radius: 0.7,
+  x: 0, z: 0, radius: 0.6,
   hp: 100, maxHp: 100,
   oxygen: 100, maxOxygen: 100,
   food: 100, water: 100, stamina: 100,
@@ -743,7 +751,6 @@ function executeStructureBuild() {
 }
 
 function spawnStructureFromNetwork(type, bx, bz, rotY, sId) {
-  // Guard against duplicate spawns from sync overhead
   if (structures.some(s => s.id === sId)) return;
 
   const data = getStructureGeometryAndMaterial(type, false);
@@ -754,24 +761,17 @@ function spawnStructureFromNetwork(type, bx, bz, rotY, sId) {
   mesh.receiveShadow = true;
   scene.add(mesh);
 
-  // Structural Dimensions for Axis Aligned Bounding Boxes
-  let sizeX = 1.0, sizeZ = 1.0;
+  mesh.geometry.computeBoundingBox();
+  let box = new THREE.Box3().setFromObject(mesh);
+
   let maxHp = 100;
-
-  if (type === 'wall') { sizeX = 4.0; sizeZ = 0.8; maxHp = 150; }
-  else if (type === 'gate') { sizeX = 4.5; sizeZ = 1.0; maxHp = 200; }
-  else if (type === 'healarray') { sizeX = 2.4; sizeZ = 2.4; maxHp = 80; }
-
-  // Process rotated width metrics
-  let cos = Math.abs(Math.cos(rotY));
-  let sin = Math.abs(Math.sin(rotY));
-  let extX = (sizeX * sin + sizeZ * cos) / 2;
-  let extZ = (sizeX * cos + sizeZ * sin) / 2;
+  if (type === 'wall') maxHp = 150;
+  else if (type === 'gate') maxHp = 200;
+  else if (type === 'healarray') maxHp = 80;
 
   structures.push({ 
     id: sId, type, x: bx, z: bz, rotation: rotY, 
-    minX: bx - extX, maxX: bx + extX, 
-    minZ: bz - extZ, maxZ: bz + extZ,
+    box: box,
     hp: maxHp, maxHp, mesh,
     uiElement: null
   });
@@ -797,18 +797,20 @@ function setupInputHandlers() {
 
   const canvasElement = renderer.domElement;
   canvasElement.addEventListener('mousedown', e => {
-    if (e.button === 0 && !['none', 'spear', 'blaster'].includes(currentSchematic)) {
-      executeStructureBuild();
+    if (e.button === 0) {
+      if (!['none', 'spear', 'blaster'].includes(currentSchematic)) {
+        executeStructureBuild();
+      } else if (currentSchematic === 'spear' || currentSchematic === 'blaster') {
+        executeCombatAttack();
+      }
     }
   });
 
   document.getElementById('m-action-rotate').addEventListener('touchstart', (e) => { e.preventDefault(); player.buildRotation += Math.PI / 2; });
   document.getElementById('m-action-fire').addEventListener('touchstart', (e) => {
     e.preventDefault();
-    if (currentSchematic !== 'none') {
-      let forwardX = player.x + Math.sin(player.mesh.rotation.y) * 4;
-      let forwardZ = player.z + Math.cos(player.mesh.rotation.y) * 4;
-      executeCombatAttack(forwardX, forwardZ);
+    if (currentSchematic === 'spear' || currentSchematic === 'blaster') {
+      executeCombatAttack();
     }
   });
   document.getElementById('m-action-interact').addEventListener('touchstart', (e) => { e.preventDefault(); if (!['none', 'spear', 'blaster'].includes(currentSchematic)) executeStructureBuild(); });
@@ -881,8 +883,8 @@ function selectSchematic(type) {
   const inst = document.getElementById('crafting-instructions');
   if (type === 'none') inst.innerText = "Observe Mode: Move around the grid. Drag joystick or use WASD keys.";
   if (['wall', 'gate', 'healarray'].includes(type)) inst.innerText = `Schematic Ready: Press 'R' to turn orientation. Click or tap Action to build.`;
-  if (type === 'spear') inst.innerText = "Shock Spear: Tap Trigger or Click to strike adjacent enemies.";
-  if (type === 'blaster') inst.innerText = "Ion Blaster: Tap Trigger or Click to fire long range plasma cells.";
+  if (type === 'spear') inst.innerText = "Shock Spear Unlocked: Left Click / Tap Trigger to thrust in the direction you look.";
+  if (type === 'blaster') inst.innerText = "Ion Blaster Unlocked: Left Click / Tap Trigger to deploy automatic plasma bolts.";
 }
 
 function consumeRation() {
@@ -896,23 +898,25 @@ function craftRation() {
   else { alert("Insufficient compounds!"); }
 }
 
-function executeCombatAttack(tx, tz) {
-  let angle = Math.atan2(tx - player.x, tz - player.z);
-  player.mesh.rotation.y = angle;
+function executeCombatAttack() {
+  let lookAngle = player.mesh.rotation.y;
 
   if (currentSchematic === 'spear') {
-    enemies.forEach((en, idx) => {
-      if (Math.hypot(en.x - player.x, en.z - player.z) < 4.5) {
+    // Structural Sweep: Target any hostiles within a short frontal arc cone
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      let en = enemies[i];
+      let dist = Math.hypot(en.x - player.x, en.z - player.z);
+      if (dist < 5.0) {
         en.hp -= 20;
         if (en.hp <= 0) {
           if (en.mesh) scene.remove(en.mesh);
-          enemies.splice(idx, 1);
+          enemies.splice(i, 1);
           inventory.scrap += 2; if(Math.random() < 0.3) inventory.iron += 1; updateUI();
         }
       }
-    });
+    }
   } else if (currentSchematic === 'blaster') {
-    const geo = new THREE.SphereGeometry(0.2, 4, 4);
+    const geo = new THREE.SphereGeometry(0.25, 6, 6);
     const mat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
     const pMesh = new THREE.Mesh(geo, mat);
     pMesh.position.set(player.x, 1.2, player.z);
@@ -920,7 +924,7 @@ function executeCombatAttack(tx, tz) {
 
     projectiles.push({
       x: player.x, z: player.z,
-      vx: Math.sin(angle) * 40, vz: Math.cos(angle) * 40,
+      vx: Math.sin(lookAngle) * 35, vz: Math.cos(lookAngle) * 35,
       traveled: 0, mesh: pMesh
     });
   }
@@ -1013,15 +1017,16 @@ function processPlayerMovement(delta) {
     let nextX = player.x + dx * baseSpeed * delta;
     let nextZ = player.z + dz * baseSpeed * delta;
 
-    // AXIS ALIGNED BOUNDING BOX (AABB) INTERSECTION VALIDATION
+    let playerBox = new THREE.Box3(
+      new THREE.Vector3(nextX - player.radius, 0, nextZ - player.radius),
+      new THREE.Vector3(nextX + player.radius, 2.2, nextZ + player.radius)
+    );
+
     let collisionDetected = false;
     for (let struct of structures) {
-      // PERMIT CRITICAL EXCEPTION: Players pass freely through Gates!
-      if (struct.type === 'gate') continue;
+      if (struct.type === 'gate') continue; // Players slide seamlessly through gates
 
-      // Add small buffer shell representing player's width profile radius
-      if (nextX + player.radius > struct.minX && nextX - player.radius < struct.maxX &&
-          nextZ + player.radius > struct.minZ && nextZ - player.radius < struct.maxZ) {
+      if (struct.box && playerBox.intersectsBox(struct.box)) {
         collisionDetected = true;
         break;
       }
@@ -1042,15 +1047,16 @@ function processPlayerMovement(delta) {
 
   if (player.mesh) { player.mesh.position.x = player.x; player.mesh.position.z = player.z; }
 
-  resources.forEach((res, idx) => {
+  for (let i = resources.length - 1; i >= 0; i--) {
+    let res = resources[i];
     if (Math.hypot(player.x - res.x, player.z - res.z) < 2.8) {
       inventory[res.type] = (inventory[res.type] || 0) + 2;
       sendNetworkPacket({ type: 'leave', id: res.id }); 
       if (res.mesh) scene.remove(res.mesh);
-      resources.splice(idx, 1);
+      resources.splice(i, 1);
       updateUI();
     }
-  });
+  }
 
   if (player.oxygen <= 0) player.hp = Math.max(0, player.hp - 12 * delta);
 }
@@ -1087,12 +1093,15 @@ function processEnemySimulation(delta) {
       let nextEx = en.x + (edx / minDist) * stepSpeed;
       let nextEz = en.z + (edz / minDist) * stepSpeed;
 
-      // Enemy check against AABB boundaries (Enemies get fully blocked by walls AND gates)
+      let enemyBox = new THREE.Box3(
+        new THREE.Vector3(nextEx - en.radius, 0, nextEz - en.radius),
+        new THREE.Vector3(nextEx + en.radius, 1.8, nextEz + en.radius)
+      );
+
       let structuralBarrier = null;
       for (let struct of structures) {
-        if (nextEx + en.radius > struct.minX && nextEx - en.radius < struct.maxX &&
-            nextEz + en.radius > struct.minZ && nextEz - en.radius < struct.maxZ) {
-          structuralBarrier = struct;
+        if (struct.box && enemyBox.intersectsBox(struct.box)) {
+          structuralBarrier = struct; // Blocks enemies perfectly
           break;
         }
       }
@@ -1101,7 +1110,6 @@ function processEnemySimulation(delta) {
         en.x = nextEx; en.z = nextEz;
         if (en.mesh) en.mesh.position.set(en.x, 0.9, en.z);
       } else {
-        // Attack the blocking structure
         structuralBarrier.hp -= 12 * delta;
         sendNetworkPacket({ type: 'structDmg', structId: structuralBarrier.id, hp: structuralBarrier.hp });
         if (structuralBarrier.hp <= 0) removeStructure(structuralBarrier);
@@ -1116,7 +1124,6 @@ function processEnemySimulation(delta) {
 }
 
 function processPassiveDayHealing(delta) {
-  // During daytime, check for any placeable Recon Arrays to regenerate structures
   if (isNight) return;
 
   const arrays = structures.filter(s => s.type === 'healarray');
@@ -1125,7 +1132,6 @@ function processPassiveDayHealing(delta) {
   structures.forEach(struct => {
     if (struct.type === 'healarray' || struct.hp >= struct.maxHp) return;
 
-    // Check if within transmission range of a patch beacon array
     let nearBeacon = false;
     for (let beacon of arrays) {
       if (Math.hypot(struct.x - beacon.x, struct.z - beacon.z) < 22.0) {
@@ -1135,7 +1141,7 @@ function processPassiveDayHealing(delta) {
     }
 
     if (nearBeacon) {
-      struct.hp = Math.min(struct.maxHp, struct.hp + 6.0 * delta); // Regenerate structural health points
+      struct.hp = Math.min(struct.maxHp, struct.hp + 6.0 * delta); 
     }
   });
 }
@@ -1147,21 +1153,35 @@ function spawnHostResourceDistribution() {
 }
 
 function processProjectiles(delta) {
-  projectiles.forEach((p, idx) => {
-    p.x += p.vx * delta; p.z += p.vz * delta; p.traveled += Math.hypot(p.vx * delta, p.vz * delta);
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    let p = projectiles[i];
+    p.x += p.vx * delta; 
+    p.z += p.vz * delta; 
+    p.traveled += Math.hypot(p.vx * delta, p.vz * delta);
+    
     if (p.mesh) p.mesh.position.set(p.x, 1.2, p.z);
 
-    enemies.forEach((en, eIdx) => {
+    let hit = false;
+    for (let eIdx = enemies.length - 1; eIdx >= 0; eIdx--) {
+      let en = enemies[eIdx];
       if (Math.hypot(p.x - en.x, p.z - en.z) < 2.2) {
-        en.hp -= 15; p.traveled = 999; 
+        en.hp -= 15; 
+        hit = true;
         if (en.hp <= 0) {
-          if (en.mesh) scene.remove(en.mesh); enemies.splice(eIdx, 1); inventory.scrap += 2; updateUI();
+          if (en.mesh) scene.remove(en.mesh); 
+          enemies.splice(eIdx, 1); 
+          inventory.scrap += 2; 
+          updateUI();
         }
+        break;
       }
-    });
+    }
 
-    if (p.traveled > 35) { if (p.mesh) scene.remove(p.mesh); projectiles.splice(idx, 1); }
-  });
+    if (hit || p.traveled > 45) { 
+      if (p.mesh) scene.remove(p.mesh); 
+      projectiles.splice(i, 1); 
+    }
+  }
 }
 
 function updateCameraRig() {
@@ -1181,7 +1201,6 @@ function renderStructureHealthOverlay() {
   structures.forEach(struct => {
     let healthPct = Math.round((struct.hp / struct.maxHp) * 100);
     
-    // Only display structural health cards if the object has sustained network damage
     if (healthPct < 100 && struct.hp > 0) {
       if (!struct.uiElement) {
         struct.uiElement = document.createElement('div');
@@ -1189,7 +1208,6 @@ function renderStructureHealthOverlay() {
         container.appendChild(struct.uiElement);
       }
       
-      // Vector projection map from 3D space coordinates onto screen pixels
       let wp = new THREE.Vector3(struct.x, struct.type === 'gate' ? 3.5 : 2.5, struct.z);
       wp.project(camera);
       
@@ -1238,7 +1256,7 @@ function resetGame() {
   player.x = 0; player.z = 0; player.hp = 100; player.oxygen = 100;
   player.food = 100; player.water = 100; player.stamina = 100;
   player.camAngle = 0; player.joyX = 0; player.joyZ = 0; player.buildRotation = 0;
-  inventory = { wood: 20, coral: 15, scrap: 10, iron: 5, glow: 2, rations: 2 };
+  inventory = { wood: 40, coral: 25, scrap: 20, iron: 15, glow: 5, rations: 2 };
   craftedWeapons = { spear: false, blaster: false };
   cycleTime = 40; isNight = false; currentDay = 1;
   
